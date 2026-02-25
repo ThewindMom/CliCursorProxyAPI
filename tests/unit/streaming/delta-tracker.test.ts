@@ -16,11 +16,26 @@ describe("DeltaTracker", () => {
     expect(tracker.nextText("Hello world")).toBe(" world");
   });
 
-  it("returns full text when not a prefix", () => {
+  it("returns only new suffix when prefix drifts", () => {
     const tracker = new DeltaTracker();
 
     expect(tracker.nextText("Hello")).toBe("Hello");
-    expect(tracker.nextText("Hi there")).toBe("Hi there");
+    // "Hello" vs "Hi there" share prefix "H", so delta = "i there"
+    expect(tracker.nextText("Hi there")).toBe("i there");
+  });
+
+  it("returns empty string for duplicate event", () => {
+    const tracker = new DeltaTracker();
+
+    expect(tracker.nextText("Hello world")).toBe("Hello world");
+    expect(tracker.nextText("Hello world")).toBe("");
+  });
+
+  it("returns empty string when current is substring of previous", () => {
+    const tracker = new DeltaTracker();
+
+    expect(tracker.nextText("Hello world")).toBe("Hello world");
+    expect(tracker.nextText("Hello")).toBe("");
   });
 
   it("handles unicode text", () => {
@@ -28,6 +43,33 @@ describe("DeltaTracker", () => {
 
     expect(tracker.nextText("Hi 😀")).toBe("Hi 😀");
     expect(tracker.nextText("Hi 😀!!")).toBe("!!");
+  });
+
+  it("handles trailing whitespace drift without duplication", () => {
+    const tracker = new DeltaTracker();
+
+    expect(tracker.nextText("Line one\n")).toBe("Line one\n");
+    expect(tracker.nextText("Line one\nLine two")).toBe("Line two");
+  });
+
+  it("handles accumulated text with minor formatting change", () => {
+    const tracker = new DeltaTracker();
+
+    expect(tracker.nextText("Hello world.")).toBe("Hello world.");
+    expect(tracker.nextText("Hello world. Goodbye.")).toBe(" Goodbye.");
+  });
+
+  it("does not re-emit full text on mid-stream prefix mismatch", () => {
+    const tracker = new DeltaTracker();
+    const base = "The quick brown fox jumps over the lazy dog.";
+
+    expect(tracker.nextText(base)).toBe(base);
+    // Simulate formatting drift: same text but with an extra space inserted mid-stream
+    const drifted = "The quick brown fox  jumps over the lazy dog. And more.";
+    const result = tracker.nextText(drifted);
+    // Common prefix is "The quick brown fox " (20 chars), delta is " jumps over..."
+    expect(result.length).toBeLessThan(drifted.length);
+    expect(result).not.toBe(drifted);
   });
 
   it("tracks thinking separately", () => {

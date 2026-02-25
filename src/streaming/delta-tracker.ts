@@ -24,10 +24,24 @@ export class DeltaTracker {
       return current;
     }
 
+    // Happy path: accumulated text grows with exact prefix match
     if (current.startsWith(previous)) {
       return current.slice(previous.length);
     }
 
-    return current;
+    // Accumulated text was already fully emitted (e.g. duplicate or trimmed event)
+    if (previous.startsWith(current)) {
+      return "";
+    }
+
+    // Prefix mismatch (formatting drift, unicode normalization, whitespace changes):
+    // find longest common prefix and emit only the new suffix.
+    // This prevents re-emitting the entire accumulated text as a "delta".
+    let i = 0;
+    const minLen = Math.min(previous.length, current.length);
+    while (i < minLen && previous[i] === current[i]) {
+      i++;
+    }
+    return current.slice(i);
   }
 }
