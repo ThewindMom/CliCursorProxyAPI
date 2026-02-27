@@ -42,7 +42,7 @@ export class StreamToAiSdkParts {
 
   handleEvent(event: StreamJsonEvent): AiSdkStreamPart[] {
     if (isAssistantText(event)) {
-      const isPartial = typeof (event as any).timestamp_ms === "number";
+      const isPartial = typeof event.timestamp_ms === "number";
       if (isPartial) {
         this.sawAssistantPartials = true;
         const text = extractText(event);
@@ -56,7 +56,7 @@ export class StreamToAiSdkParts {
     }
 
     if (isThinking(event)) {
-      const isPartial = typeof (event as any).timestamp_ms === "number";
+      const isPartial = typeof event.timestamp_ms === "number";
       if (isPartial) {
         this.sawThinkingPartials = true;
         const text = extractThinking(event);

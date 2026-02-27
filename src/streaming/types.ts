@@ -35,6 +35,7 @@ export type StreamJsonUserEvent = {
 export type StreamJsonAssistantEvent = {
   type: "assistant";
   timestamp?: number;
+  timestamp_ms?: number;
   session_id?: string;
   message: {
     role: "assistant";
