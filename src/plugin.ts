@@ -25,6 +25,9 @@ import { ToolRouter } from "./tools/router.js";
 import { SkillLoader } from "./tools/skills/loader.js";
 import { SkillResolver } from "./tools/skills/resolver.js";
 import { autoRefreshModels } from "./models/sync.js";
+import { readMcpConfigs } from "./mcp/config.js";
+import { McpClientManager } from "./mcp/client-manager.js";
+import { buildMcpToolHookEntries } from "./mcp/tool-bridge.js";
 import { createOpencodeClient } from "@opencode-ai/sdk";
 import { ToolRegistry as CoreRegistry } from "./tools/core/registry.js";
 import { LocalExecutor } from "./tools/executors/local.js";
@@ -1739,6 +1742,41 @@ export const CursorPlugin: Plugin = async ({ $, directory, worktree, client, ser
   // Auto-refresh model list from cursor-agent (non-blocking, fire-and-forget)
   autoRefreshModels().catch(() => {});
 
+  // MCP tool bridge: connect to MCP servers and register their tools (fire-and-forget)
+  const mcpManager = new McpClientManager();
+  const mcpToolEntries: Record<string, any> = {};
+  const mcpEnabled = process.env.CURSOR_ACP_MCP_BRIDGE !== "false"; // default ON
+
+  if (mcpEnabled) {
+    (async () => {
+      try {
+        const configs = readMcpConfigs();
+        if (configs.length === 0) {
+          log.debug("No MCP servers configured, skipping MCP bridge");
+          return;
+        }
+        log.debug("MCP bridge: connecting to servers", { count: configs.length });
+
+        await Promise.allSettled(configs.map((c) => mcpManager.connectServer(c)));
+
+        const tools = mcpManager.listTools();
+        if (tools.length === 0) {
+          log.debug("MCP bridge: no tools discovered");
+          return;
+        }
+
+        const entries = buildMcpToolHookEntries(tools, mcpManager);
+        Object.assign(mcpToolEntries, entries);
+        log.info("MCP bridge: registered tools", {
+          servers: mcpManager.connectedServers.length,
+          tools: Object.keys(entries).length,
+        });
+      } catch (err) {
+        log.debug("MCP bridge init failed", { error: String(err) });
+      }
+    })().catch(() => {});
+  }
+
   // Initialize toast service for MCP pass-through notifications
   toastService.setClient(client);
 
@@ -1862,7 +1900,7 @@ export const CursorPlugin: Plugin = async ({ $, directory, worktree, client, ser
   const toolHookEntries = buildToolHookEntries(localRegistry, workspaceDirectory);
 
   return {
-    tool: toolHookEntries,
+    tool: { ...toolHookEntries, ...mcpToolEntries },
     auth: {
       provider: CURSOR_PROVIDER_ID,
       async loader(_getAuth: () => Promise<Auth>) {
