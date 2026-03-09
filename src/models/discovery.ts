@@ -119,10 +119,20 @@ export class ModelDiscoveryService {
   private getDefaultModels(): ModelInfo[] {
     return [
       { id: "auto", name: "Auto", description: "Auto-select best model" },
+      { id: "composer-1.5", name: "Composer 1.5" },
+      { id: "opus-4.6-thinking", name: "Claude 4.6 Opus (Thinking)" },
+      { id: "opus-4.6", name: "Claude 4.6 Opus" },
+      { id: "sonnet-4.6", name: "Claude 4.6 Sonnet" },
+      { id: "sonnet-4.6-thinking", name: "Claude 4.6 Sonnet (Thinking)" },
+      { id: "opus-4.5", name: "Claude 4.5 Opus" },
+      { id: "sonnet-4.5", name: "Claude 4.5 Sonnet" },
+      { id: "gpt-5.4-high", name: "GPT-5.4 High" },
+      { id: "gpt-5.3-codex", name: "GPT-5.3 Codex" },
       { id: "gpt-5.2", name: "GPT-5.2" },
-      { id: "sonnet-4.5", name: "Sonnet 4.5" },
-      { id: "opus-4.5", name: "Opus 4.5" },
-      { id: "gemini-3-pro", name: "Gemini 3 Pro" }
+      { id: "gemini-3.1-pro", name: "Gemini 3.1 Pro" },
+      { id: "gemini-3-pro", name: "Gemini 3 Pro" },
+      { id: "grok", name: "Grok" },
+      { id: "kimi-k2.5", name: "Kimi K2.5" },
     ];
   }
 

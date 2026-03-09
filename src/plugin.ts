@@ -24,6 +24,7 @@ import { toOpenAiParameters, describeTool } from "./tools/schema.js";
 import { ToolRouter } from "./tools/router.js";
 import { SkillLoader } from "./tools/skills/loader.js";
 import { SkillResolver } from "./tools/skills/resolver.js";
+import { autoRefreshModels } from "./models/sync.js";
 import { createOpencodeClient } from "@opencode-ai/sdk";
 import { ToolRegistry as CoreRegistry } from "./tools/core/registry.js";
 import { LocalExecutor } from "./tools/executors/local.js";
@@ -1735,8 +1736,8 @@ export const CursorPlugin: Plugin = async ({ $, directory, worktree, client, ser
   });
   await ensurePluginDirectory();
 
-  // Initialize toast service for MCP pass-through notifications
-  toastService.setClient(client);
+  // Auto-refresh model list from cursor-agent (non-blocking, fire-and-forget)
+  autoRefreshModels().catch(() => {});
 
   // Initialize toast service for MCP pass-through notifications
   toastService.setClient(client);
