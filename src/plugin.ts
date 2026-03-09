@@ -1742,19 +1742,18 @@ export const CursorPlugin: Plugin = async ({ $, directory, worktree, client, ser
   // Auto-refresh model list from cursor-agent (non-blocking, fire-and-forget)
   autoRefreshModels().catch(() => {});
 
-  // MCP tool bridge: connect to MCP servers and register their tools (fire-and-forget)
+  // MCP tool bridge: connect to MCP servers and register their tools.
+  // We await init so tools are available before the plugin returns its tool hook.
   const mcpManager = new McpClientManager();
-  const mcpToolEntries: Record<string, any> = {};
+  let mcpToolEntries: Record<string, any> = {};
   const mcpEnabled = process.env.CURSOR_ACP_MCP_BRIDGE !== "false"; // default ON
 
   if (mcpEnabled) {
-    (async () => {
-      try {
-        const configs = readMcpConfigs();
-        if (configs.length === 0) {
-          log.debug("No MCP servers configured, skipping MCP bridge");
-          return;
-        }
+    try {
+      const configs = readMcpConfigs();
+      if (configs.length === 0) {
+        log.debug("No MCP servers configured, skipping MCP bridge");
+      } else {
         log.debug("MCP bridge: connecting to servers", { count: configs.length });
 
         await Promise.allSettled(configs.map((c) => mcpManager.connectServer(c)));
@@ -1762,19 +1761,17 @@ export const CursorPlugin: Plugin = async ({ $, directory, worktree, client, ser
         const tools = mcpManager.listTools();
         if (tools.length === 0) {
           log.debug("MCP bridge: no tools discovered");
-          return;
+        } else {
+          mcpToolEntries = buildMcpToolHookEntries(tools, mcpManager);
+          log.info("MCP bridge: registered tools", {
+            servers: mcpManager.connectedServers.length,
+            tools: Object.keys(mcpToolEntries).length,
+          });
         }
-
-        const entries = buildMcpToolHookEntries(tools, mcpManager);
-        Object.assign(mcpToolEntries, entries);
-        log.info("MCP bridge: registered tools", {
-          servers: mcpManager.connectedServers.length,
-          tools: Object.keys(entries).length,
-        });
-      } catch (err) {
-        log.debug("MCP bridge init failed", { error: String(err) });
       }
-    })().catch(() => {});
+    } catch (err) {
+      log.debug("MCP bridge init failed", { error: String(err) });
+    }
   }
 
   // Initialize toast service for MCP pass-through notifications

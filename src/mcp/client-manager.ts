@@ -51,17 +51,10 @@ async function loadDefaultDeps(): Promise<McpClientManagerDeps> {
 
 export class McpClientManager {
   private connections = new Map<string, ServerConnection>();
-  private deps: McpClientManagerDeps;
+  private deps: McpClientManagerDeps | null;
 
   constructor(deps?: McpClientManagerDeps) {
-    this.deps = deps ?? {
-      createClient: () => {
-        throw new Error("MCP SDK not loaded yet — call connectServer after init");
-      },
-      createTransport: () => {
-        throw new Error("MCP SDK not loaded yet");
-      },
-    };
+    this.deps = deps ?? null;
   }
 
   async connectServer(config: McpServerConfig): Promise<void> {
@@ -70,8 +63,8 @@ export class McpClientManager {
       return;
     }
 
-    // Lazy-load real deps if none were injected (placeholder check)
-    if (this.deps.createClient.toString().includes("MCP SDK not loaded yet")) {
+    // Lazy-load MCP SDK if no deps were injected
+    if (!this.deps) {
       try {
         this.deps = await loadDefaultDeps();
       } catch (err) {
@@ -80,10 +73,11 @@ export class McpClientManager {
       }
     }
 
+    const deps = this.deps;
     let client: any;
     try {
-      client = this.deps.createClient();
-      const transport = this.deps.createTransport(config);
+      client = deps.createClient();
+      const transport = deps.createTransport(config);
       await client.connect(transport);
     } catch (err) {
       log.warn("MCP server connection failed", {
