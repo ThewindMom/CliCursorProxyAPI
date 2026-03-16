@@ -59,6 +59,7 @@ export interface ToolLoopGuardTermination {
   maxRepeat: number;
   errorClass: string;
   silent?: boolean;
+  soft?: boolean;
 }
 
 export interface ToolSchemaValidationTermination {
@@ -177,6 +178,15 @@ export async function handleToolLoopEventLegacy(
         compat.validation,
       );
       if (validationTermination) {
+        if (validationTermination.soft) {
+          const hintChunk = createLoopGuardHintChunk(responseMeta, normalizedToolCall, validationTermination);
+          log.debug("Soft-blocking schema validation loop guard in legacy (emitting hint)", {
+            tool: normalizedToolCall.function.name,
+            fingerprint: validationTermination.fingerprint,
+          });
+          await onToolResult(hintChunk);
+          return { intercepted: false, skipConverter: true };
+        }
         return { intercepted: false, skipConverter: true, terminate: validationTermination };
       }
 
@@ -211,6 +221,15 @@ export async function handleToolLoopEventLegacy(
 
     const termination = evaluateToolLoopGuard(toolLoopGuard, normalizedToolCall);
     if (termination) {
+      if (termination.soft) {
+        const hintChunk = createLoopGuardHintChunk(responseMeta, normalizedToolCall, termination);
+        log.debug("Soft-blocking tool loop guard in legacy (emitting hint)", {
+          tool: normalizedToolCall.function.name,
+          fingerprint: termination.fingerprint,
+        });
+        await onToolResult(hintChunk);
+        return { intercepted: false, skipConverter: true };
+      }
       return { intercepted: false, skipConverter: true, terminate: termination };
     }
     await onInterceptedToolCall(normalizedToolCall);
@@ -341,10 +360,30 @@ export async function handleToolLoopEventV1(
       compat.validation,
     );
     if (validationTermination) {
+      if (validationTermination.soft) {
+        const hintChunk = createLoopGuardHintChunk(responseMeta, normalizedToolCall, validationTermination);
+        log.debug("Soft-blocking schema validation loop guard (emitting hint)", {
+          tool: normalizedToolCall.function.name,
+          fingerprint: validationTermination.fingerprint,
+          repeatCount: validationTermination.repeatCount,
+        });
+        await onToolResult(hintChunk);
+        return { intercepted: false, skipConverter: true };
+      }
       return { intercepted: false, skipConverter: true, terminate: validationTermination };
     }
     const termination = evaluateToolLoopGuard(toolLoopGuard, normalizedToolCall);
     if (termination) {
+      if (termination.soft) {
+        const hintChunk = createLoopGuardHintChunk(responseMeta, normalizedToolCall, termination);
+        log.debug("Soft-blocking tool loop guard in validation path (emitting hint)", {
+          tool: normalizedToolCall.function.name,
+          fingerprint: termination.fingerprint,
+          repeatCount: termination.repeatCount,
+        });
+        await onToolResult(hintChunk);
+        return { intercepted: false, skipConverter: true };
+      }
       return { intercepted: false, skipConverter: true, terminate: termination };
     }
     const reroutedWrite = tryRerouteEditToWrite(
@@ -415,6 +454,16 @@ export async function handleToolLoopEventV1(
 
   const termination = evaluateToolLoopGuard(toolLoopGuard, normalizedToolCall);
   if (termination) {
+    if (termination.soft) {
+      const hintChunk = createLoopGuardHintChunk(responseMeta, normalizedToolCall, termination);
+      log.debug("Soft-blocking tool loop guard (emitting hint)", {
+        tool: normalizedToolCall.function.name,
+        fingerprint: termination.fingerprint,
+        repeatCount: termination.repeatCount,
+      });
+      await onToolResult(hintChunk);
+      return { intercepted: false, skipConverter: true };
+    }
     return { intercepted: false, skipConverter: true, terminate: termination };
   }
   await onInterceptedToolCall(normalizedToolCall);
@@ -515,6 +564,11 @@ function evaluateToolLoopGuard(
     };
   }
 
+  // First trigger (repeatCount exactly one over threshold): soft block.
+  // Emit a hint to the model instead of killing the stream.
+  // If the model ignores the hint and retries, subsequent triggers are hard kills.
+  const isFirstTrigger = decision.repeatCount === decision.maxRepeat + 1;
+
   return {
     reason: "loop_guard",
     message: `Tool loop guard stopped repeated failing calls to "${toolCall.function.name}" `
@@ -525,6 +579,7 @@ function evaluateToolLoopGuard(
     repeatCount: decision.repeatCount,
     maxRepeat: decision.maxRepeat,
     errorClass: decision.errorClass,
+    soft: isFirstTrigger,
   };
 }
 
@@ -570,12 +625,15 @@ function evaluateSchemaValidationLoopGuard(
     return null;
   }
 
-  log.warn("Tool loop guard triggered on schema validation", {
+  const isFirstTrigger = decision.repeatCount === decision.maxRepeat + 1;
+
+  log.debug("Tool loop guard triggered on schema validation", {
     tool: toolCall.function.name,
     fingerprint: decision.fingerprint,
     repeatCount: decision.repeatCount,
     maxRepeat: decision.maxRepeat,
     validationSignature,
+    soft: isFirstTrigger,
   });
   return {
     reason: "loop_guard",
@@ -588,6 +646,7 @@ function evaluateSchemaValidationLoopGuard(
     repeatCount: decision.repeatCount,
     maxRepeat: decision.maxRepeat,
     errorClass: decision.errorClass,
+    soft: isFirstTrigger,
   };
 }
 
@@ -645,6 +704,35 @@ function createNonFatalSchemaValidationHintChunk(
     || "Use write for full-file replacement, or provide path, old_string, and new_string for edit.";
   const content =
     `Skipped malformed tool call "${toolCall.function.name}": ${termination.message} ${hint}`.trim();
+  return {
+    id: meta.id,
+    object: "chat.completion.chunk",
+    created: meta.created,
+    model: meta.model,
+    choices: [
+      {
+        index: 0,
+        delta: {
+          role: "assistant",
+          content,
+        },
+        finish_reason: null,
+      },
+    ],
+  };
+}
+
+type LoopGuardHintChunk = NonFatalSchemaValidationResultChunk;
+
+function createLoopGuardHintChunk(
+  meta: { id: string; created: number; model: string },
+  toolCall: OpenAiToolCall,
+  termination: ToolLoopGuardTermination,
+): LoopGuardHintChunk {
+  const content =
+    `Tool "${toolCall.function.name}" has been temporarily blocked after `
+    + `${termination.repeatCount} repeated ${termination.errorClass} failures. `
+    + "Do not retry this tool. Use a different approach to complete the task.";
   return {
     id: meta.id,
     object: "chat.completion.chunk",

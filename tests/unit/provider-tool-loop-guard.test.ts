@@ -659,3 +659,45 @@ describe("tool loop guard", () => {
     expect(decision.repeatCount).toBe(9);  // 8 historical + 1 current
     expect(decision.maxRepeat).toBe(10);   // 2 * 5 (EXPLORATION_LIMIT_MULTIPLIER)
   });
+
+  it("ISSUE_51: task tool validation errors trigger guard aggressively", () => {
+    // Simulate: cursor-agent calls "task" with subagent_type: undefined
+    // OpenCode returns validation error containing "invalid"
+    // Guard triggers after 3 attempts (maxRepeat=2, strict limit)
+    const guard = createToolLoopGuard(
+      [
+        {
+          role: "tool",
+          tool_call_id: "task-1",
+          content:
+            'The task tool was called with invalid arguments: [{"expected":"string","code":"invalid_type","path":["subagent_type"],"message":"Invalid input: expected string, received undefined"}]',
+        },
+      ],
+      2,
+    );
+
+    const taskCall = {
+      id: "task-1",
+      type: "function" as const,
+      function: {
+        name: "task",
+        arguments: JSON.stringify({ subagent_type: undefined, prompt: "analyze repo" }),
+      },
+    };
+
+    const d1 = guard.evaluate(taskCall);
+    const d2 = guard.evaluate(taskCall);
+    const d3 = guard.evaluate(taskCall);
+
+    // "task" is NOT in UNKNOWN_AS_SUCCESS_TOOLS, error contains "invalid" → "validation"
+    expect(d1.errorClass).toBe("validation");
+    expect(d1.triggered).toBe(false);
+
+    // "task" is NOT in EXPLORATION_TOOLS → gets both strict AND coarse tracking
+    expect(d2.triggered).toBe(false);
+
+    // Strict fingerprint triggers at repeatCount > maxRepeat (3 > 2)
+    expect(d3.triggered).toBe(true);
+    expect(d3.repeatCount).toBe(3);
+    expect(d3.maxRepeat).toBe(2);
+  });

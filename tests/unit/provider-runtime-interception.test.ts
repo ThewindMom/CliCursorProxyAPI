@@ -524,6 +524,12 @@ describe("provider runtime interception fallback", () => {
       [{ role: "tool", tool_call_id: "c1", content: "invalid schema: missing path" }],
       1,
     );
+    // Two pre-evaluations: count=2 is soft (first trigger), count=3 at runtime is hard
+    guard.evaluate({
+      id: "c1",
+      type: "function",
+      function: { name: "read", arguments: "{\"path\":\"foo.txt\"}" },
+    });
     guard.evaluate({
       id: "c1",
       type: "function",
@@ -550,6 +556,12 @@ describe("provider runtime interception fallback", () => {
       [{ role: "tool", tool_call_id: "c1", content: "invalid schema: missing path" }],
       1,
     );
+    // Two pre-evaluations to push past soft threshold
+    guard.evaluate({
+      id: "c1",
+      type: "function",
+      function: { name: "read", arguments: "{\"path\":\"foo.txt\"}" },
+    });
     guard.evaluate({
       id: "c1",
       type: "function",
@@ -719,6 +731,12 @@ describe("provider runtime interception fallback", () => {
       [{ role: "tool", tool_call_id: "c1", content: "timeout while running tool" }],
       1,
     );
+    // Two pre-evaluations to push past soft threshold
+    guard.evaluate({
+      id: "c1",
+      type: "function",
+      function: { name: "read", arguments: "{\"path\":\"foo.txt\"}" },
+    });
     guard.evaluate({
       id: "c1",
       type: "function",
@@ -743,5 +761,266 @@ describe("provider runtime interception fallback", () => {
     expect(fallbackCalled).toBe(true);
     expect(interceptedName).toBe("read");
     expect(result).toEqual({ intercepted: true, skipConverter: true });
+  });
+});
+
+describe("graduated response (soft/hard termination)", () => {
+  it("returns soft termination on first loop guard trigger", async () => {
+    const guard = createToolLoopGuard(
+      [{ role: "tool", tool_call_id: "c1", content: "invalid arguments" }],
+      1,
+    );
+    guard.evaluate({
+      id: "c1",
+      type: "function",
+      function: { name: "task", arguments: '{"prompt":"analyze"}' },
+    });
+
+    const toolResults: any[] = [];
+    const result = await handleToolLoopEventWithFallback({
+      ...createBaseOptions({
+        event: {
+          type: "tool_call",
+          call_id: "c2",
+          tool_call: {
+            taskToolCall: {
+              args: { prompt: "analyze" },
+            },
+          },
+        } as any,
+        allowedToolNames: new Set(["task"]),
+        toolSchemaMap: new Map(),
+        toolLoopGuard: guard,
+        onToolResult: async (toolResult) => {
+          toolResults.push(toolResult);
+        },
+      }),
+      boundary: createProviderBoundary("v1", "cursor-acp"),
+      boundaryMode: "v1",
+      autoFallbackToLegacy: false,
+    });
+
+    expect(result.terminate).toBeUndefined();
+    expect(result.intercepted).toBe(false);
+    expect(result.skipConverter).toBe(true);
+    expect(toolResults).toHaveLength(1);
+    expect(toolResults[0]?.choices?.[0]?.delta?.content).toContain("task");
+    expect(toolResults[0]?.choices?.[0]?.delta?.content).toContain("blocked");
+  });
+
+  it("returns hard termination on second loop guard trigger", async () => {
+    const guard = createToolLoopGuard(
+      [{ role: "tool", tool_call_id: "c1", content: "invalid arguments" }],
+      1,
+    );
+    guard.evaluate({
+      id: "c1",
+      type: "function",
+      function: { name: "task", arguments: '{"prompt":"analyze"}' },
+    });
+    guard.evaluate({
+      id: "c1",
+      type: "function",
+      function: { name: "task", arguments: '{"prompt":"analyze"}' },
+    });
+
+    const result = await handleToolLoopEventWithFallback({
+      ...createBaseOptions({
+        event: {
+          type: "tool_call",
+          call_id: "c3",
+          tool_call: {
+            taskToolCall: {
+              args: { prompt: "analyze" },
+            },
+          },
+        } as any,
+        allowedToolNames: new Set(["task"]),
+        toolSchemaMap: new Map(),
+        toolLoopGuard: guard,
+      }),
+      boundary: createProviderBoundary("v1", "cursor-acp"),
+      boundaryMode: "v1",
+      autoFallbackToLegacy: false,
+    });
+
+    expect(result.terminate).toBeDefined();
+    expect(result.terminate?.reason).toBe("loop_guard");
+  });
+
+  it("soft-blocks schema validation guard on first trigger", async () => {
+    // Use edit with only path (no old_string, new_string, or content) so schema
+    // compat can't repair it — validation actually fails, hitting the guard.
+    const guard = createToolLoopGuard([], 1);
+    guard.evaluateValidation(
+      {
+        id: "e1",
+        type: "function",
+        function: { name: "edit", arguments: '{"path":"TODO.md"}' },
+      },
+      "missing:old_string,new_string",
+    );
+
+    const toolResults: any[] = [];
+    const result = await handleToolLoopEventV1({
+      ...createBaseOptions({
+        event: {
+          type: "tool_call",
+          call_id: "e2",
+          tool_call: {
+            editToolCall: {
+              args: { path: "TODO.md" },
+            },
+          },
+        } as any,
+        allowedToolNames: new Set(["edit"]),
+        toolSchemaMap: new Map([
+          [
+            "edit",
+            {
+              type: "object",
+              properties: {
+                path: { type: "string" },
+                old_string: { type: "string" },
+                new_string: { type: "string" },
+              },
+              required: ["path", "old_string", "new_string"],
+              additionalProperties: false,
+            },
+          ],
+        ]),
+        toolLoopGuard: guard,
+        onToolResult: async (toolResult) => {
+          toolResults.push(toolResult);
+        },
+      }),
+      boundary: createProviderBoundary("v1", "cursor-acp"),
+    });
+
+    // Soft block for schema validation: hint emitted, no termination
+    expect(result.terminate).toBeUndefined();
+    expect(result.intercepted).toBe(false);
+    expect(result.skipConverter).toBe(true);
+    expect(toolResults.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("success loop termination remains silent (not soft)", async () => {
+    const guard = createToolLoopGuard(
+      [{ role: "tool", tool_call_id: "c1", content: '{"success":true}' }],
+      1,
+    );
+    guard.evaluate({
+      id: "c1",
+      type: "function",
+      function: { name: "edit", arguments: '{"path":"foo.txt","old_string":"a","new_string":"b"}' },
+    });
+
+    const result = await handleToolLoopEventWithFallback({
+      ...createBaseOptions({
+        event: {
+          type: "tool_call",
+          call_id: "c2",
+          tool_call: {
+            editToolCall: {
+              args: { path: "foo.txt", old_string: "a", new_string: "b" },
+            },
+          },
+        } as any,
+        allowedToolNames: new Set(["edit"]),
+        toolLoopGuard: guard,
+      }),
+      boundary: createProviderBoundary("v1", "cursor-acp"),
+      boundaryMode: "v1",
+      autoFallbackToLegacy: false,
+    });
+
+    expect(result.terminate).toBeDefined();
+    expect(result.terminate?.reason).toBe("loop_guard");
+    expect(result.terminate?.errorClass).toBe("success");
+    expect((result.terminate as any)?.silent).toBe(true);
+  });
+
+  it("soft-blocks in legacy path on first loop guard trigger", async () => {
+    const guard = createToolLoopGuard(
+      [{ role: "tool", tool_call_id: "c1", content: "invalid arguments" }],
+      1,
+    );
+    guard.evaluate({
+      id: "c1",
+      type: "function",
+      function: { name: "task", arguments: '{"prompt":"analyze"}' },
+    });
+
+    const toolResults: any[] = [];
+    const result = await handleToolLoopEventLegacy(
+      createBaseOptions({
+        event: {
+          type: "tool_call",
+          call_id: "c2",
+          tool_call: {
+            taskToolCall: {
+              args: { prompt: "analyze" },
+            },
+          },
+        } as any,
+        allowedToolNames: new Set(["task"]),
+        toolSchemaMap: new Map(),
+        toolLoopGuard: guard,
+        onToolResult: async (toolResult) => {
+          toolResults.push(toolResult);
+        },
+      }),
+    );
+
+    expect(result.terminate).toBeUndefined();
+    expect(result.intercepted).toBe(false);
+    expect(result.skipConverter).toBe(true);
+    expect(toolResults).toHaveLength(1);
+    expect(toolResults[0]?.choices?.[0]?.delta?.content).toContain("task");
+  });
+
+  it("soft block passes through fallback handler without triggering legacy fallback", async () => {
+    let fallbackCalled = false;
+    const guard = createToolLoopGuard(
+      [{ role: "tool", tool_call_id: "c1", content: "invalid arguments" }],
+      1,
+    );
+    guard.evaluate({
+      id: "c1",
+      type: "function",
+      function: { name: "task", arguments: '{"prompt":"analyze"}' },
+    });
+
+    const toolResults: any[] = [];
+    const result = await handleToolLoopEventWithFallback({
+      ...createBaseOptions({
+        event: {
+          type: "tool_call",
+          call_id: "c2",
+          tool_call: {
+            taskToolCall: {
+              args: { prompt: "analyze" },
+            },
+          },
+        } as any,
+        allowedToolNames: new Set(["task"]),
+        toolSchemaMap: new Map(),
+        toolLoopGuard: guard,
+        onToolResult: async (toolResult) => {
+          toolResults.push(toolResult);
+        },
+      }),
+      boundary: createProviderBoundary("v1", "cursor-acp"),
+      boundaryMode: "v1",
+      autoFallbackToLegacy: true,
+      onFallbackToLegacy: () => {
+        fallbackCalled = true;
+      },
+    });
+
+    expect(fallbackCalled).toBe(false);
+    expect(result.terminate).toBeUndefined();
+    expect(result.intercepted).toBe(false);
+    expect(toolResults).toHaveLength(1);
   });
 });
