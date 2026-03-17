@@ -17,9 +17,12 @@ No prompt limits. No broken streams. Full thinking + tool support in OpenCode. Y
 curl -fsSL https://raw.githubusercontent.com/Nomadcxx/opencode-cursor/main/install.sh | bash
 ```
 
-**Windows (PowerShell):**
+**Windows:**
 ```powershell
-iwr https://raw.githubusercontent.com/Nomadcxx/opencode-cursor/main/install.ps1 -UseBasicParsing | iex
+# Windows installer coming soon.
+# In the meantime, use Option C (npm install):
+npm install -g @rama_nigg/open-cursor
+open-cursor install
 ```
 
 <details>

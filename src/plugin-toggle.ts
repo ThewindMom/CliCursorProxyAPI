@@ -69,7 +69,7 @@ export function shouldEnableCursorPlugin(env: EnvLike = process.env): {
     return {
       enabled,
       configPath,
-      reason: enabled ? "enabled_in_plugin_array_or_legacy" : "disabled_in_plugin_array",
+      reason: enabled ? "enabled" : "disabled_in_plugin_array",
     };
   } catch {
     return {

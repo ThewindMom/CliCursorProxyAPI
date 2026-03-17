@@ -69,8 +69,9 @@ describe("plugin toggle", () => {
     }
   });
 
-  it("enables plugin when provider object contains cursor-acp key (no plugin array)", () => {
-    expect(isCursorPluginEnabledInConfig({ provider: { "cursor-acp": { model: "claude" } } })).toBe(true);
+  it("enables plugin via provider detection even when plugin array does not contain cursor-acp", () => {
+    // Provider detection fires before plugin array check — cursor-acp in provider overrides a restrictive plugin array
+    expect(isCursorPluginEnabledInConfig({ provider: { "cursor-acp": {} }, plugin: ["other-plugin"] })).toBe(true);
   });
 
   it("enables plugin via fallthrough when provider has only other providers (no plugin array)", () => {
