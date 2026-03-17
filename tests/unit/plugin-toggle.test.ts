@@ -68,4 +68,13 @@ describe("plugin toggle", () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it("enables plugin when provider object contains cursor-acp key (no plugin array)", () => {
+    expect(isCursorPluginEnabledInConfig({ provider: { "cursor-acp": { model: "claude" } } })).toBe(true);
+  });
+
+  it("enables plugin via fallthrough when provider has only other providers (no plugin array)", () => {
+    // Fallthrough — no plugin array, no cursor-acp in provider, returns true by default
+    expect(isCursorPluginEnabledInConfig({ provider: { "other-provider": {} } })).toBe(true);
+  });
 });
