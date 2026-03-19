@@ -1,233 +1,424 @@
-![header](docs/header.png)
+# CliCursorProxyAPI
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux" />
-  <img src="https://img.shields.io/badge/macOS-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS" />
-</p>
+**Universal Cursor Proxy Gateway** — Enable any OpenAI-compatible client to use Cursor Pro subscription models.
 
-No prompt limits. No broken streams. Full thinking + tool support in OpenCode. Your Cursor subscription, properly integrated.
+[![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](LICENSE)
+[![Port: 32124](https://img.shields.io/badge/Port-32124-32124)](#)
 
-## Installation
+## Overview
 
-### Option A — One-line installer
+CliCursorProxyAPI is a standalone proxy server that provides OpenAI-compatible REST API access to Cursor Pro subscription models. It wraps `cursor-agent` CLI to handle authentication and API communication, exposing a universal OpenAI-compatible interface.
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/Nomadcxx/opencode-cursor/main/install.sh | bash
+**Key Features:**
+- 🚀 **Standalone proxy** — No OpenCode plugin required
+- 🔌 **Universal client support** — Works with any OpenAI-compatible client
+- 📡 **Streaming SSE** — Real-time streaming responses
+- 🧠 **Full thinking support** — Includes reasoning/thinking content
+- 🔧 **Tool calling** — Execute tools and MCP servers
+- 🛡️ **Secure by default** — Binds to localhost, cursor-agent handles auth
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         CliCursorProxyAPI                           │
+│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────────┐  │
+│  │  /health    │  │  /v1/models  │  │  /v1/chat/completions  │  │
+│  │  GET        │  │  GET         │  │  POST (streaming SSE)  │  │
+│  └──────────────┘  └──────────────┘  └────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                      cursor-agent CLI                                │
+│              (handles auth, API communication)                     │
+└─────────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                        Cursor API                                   │
+│                  (api2.cursor.sh, agent.api5.cursor.sh)             │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-<details>
-<summary><b>Option B</b> — Add to opencode.json</summary>
+**Request Flow:**
+1. Client sends OpenAI-compatible request to proxy
+2. Proxy spawns `cursor-agent` with appropriate arguments
+3. `cursor-agent` communicates with Cursor API (handles auth internally)
+4. Proxy converts `cursor-agent`'s NDJSON output to SSE format
+5. Streaming response sent back to client
 
-Add to `~/.config/opencode/opencode.json`:
+## Prerequisites
+
+- **Runtime:** Bun 1.0+ or Node.js 18+
+- **cursor-agent:** Install via `curl https://cursor.com/install -fsS | bash`
+- **Cursor Pro subscription:** Required for API access
+- **Authentication:** `cursor-agent login` must be completed
+
+## Quickstart
+
+### 1. Install & Build
+
+```bash
+git clone https://github.com/ThewindMom/CliCursorProxyAPI.git
+cd CliCursorProxyAPI
+bun install
+bun run build
+```
+
+### 2. Start the Proxy
+
+```bash
+bun run proxy
+```
+
+The proxy starts on `http://127.0.0.1:32124` by default.
+
+### 3. Authenticate
+
+```bash
+cursor-agent login
+```
+
+This opens a browser for OAuth authentication with Cursor.
+
+### 4. Verify Setup
+
+```bash
+# Check health
+curl http://localhost:32124/health
+# {"status":"ok","version":"2.3.20","auth":"authenticated"}
+
+# List models
+curl http://localhost:32124/v1/models
+
+# Test chat
+curl -X POST http://localhost:32124/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model":"auto","messages":[{"role":"user","content":"Hello"}],"stream":true}'
+```
+
+## Client Integration Guides
+
+Choose your client below for detailed configuration:
+
+### [OpenCode](docs/OPENCODE.md)
+
+Configure OpenCode to use CliCursorProxyAPI via `@ai-sdk/openai-compatible`:
 
 ```json
 {
-  "plugin": ["@rama_nigg/open-cursor@latest"],
   "provider": {
     "cursor-acp": {
-      "name": "Cursor ACP",
       "npm": "@ai-sdk/openai-compatible",
+      "name": "Cursor ACP",
       "options": {
         "baseURL": "http://127.0.0.1:32124/v1"
       },
       "models": {
         "cursor-acp/auto": { "name": "Auto" },
-        "cursor-acp/composer-1.5": { "name": "Composer 1.5" },
-        "cursor-acp/composer-1": { "name": "Composer 1" },
-        "cursor-acp/opus-4.6-thinking": { "name": "Claude 4.6 Opus (Thinking)" },
-        "cursor-acp/opus-4.6": { "name": "Claude 4.6 Opus" },
         "cursor-acp/sonnet-4.6": { "name": "Claude 4.6 Sonnet" },
-        "cursor-acp/sonnet-4.6-thinking": { "name": "Claude 4.6 Sonnet (Thinking)" },
-        "cursor-acp/opus-4.5": { "name": "Claude 4.5 Opus" },
-        "cursor-acp/opus-4.5-thinking": { "name": "Claude 4.5 Opus (Thinking)" },
-        "cursor-acp/sonnet-4.5": { "name": "Claude 4.5 Sonnet" },
-        "cursor-acp/sonnet-4.5-thinking": { "name": "Claude 4.5 Sonnet (Thinking)" },
-        "cursor-acp/gpt-5.4-high": { "name": "GPT-5.4 High" },
-        "cursor-acp/gpt-5.4-high-fast": { "name": "GPT-5.4 High Fast" },
-        "cursor-acp/gpt-5.4-xhigh": { "name": "GPT-5.4 Extra High" },
-        "cursor-acp/gpt-5.4-xhigh-fast": { "name": "GPT-5.4 Extra High Fast" },
-        "cursor-acp/gpt-5.4-medium": { "name": "GPT-5.4" },
-        "cursor-acp/gpt-5.4-medium-fast": { "name": "GPT-5.4 Fast" },
-        "cursor-acp/gpt-5.3-codex": { "name": "GPT-5.3 Codex" },
-        "cursor-acp/gpt-5.3-codex-fast": { "name": "GPT-5.3 Codex Fast" },
-        "cursor-acp/gpt-5.3-codex-low": { "name": "GPT-5.3 Codex Low" },
-        "cursor-acp/gpt-5.3-codex-low-fast": { "name": "GPT-5.3 Codex Low Fast" },
-        "cursor-acp/gpt-5.3-codex-high": { "name": "GPT-5.3 Codex High" },
-        "cursor-acp/gpt-5.3-codex-high-fast": { "name": "GPT-5.3 Codex High Fast" },
-        "cursor-acp/gpt-5.3-codex-xhigh": { "name": "GPT-5.3 Codex Extra High" },
-        "cursor-acp/gpt-5.3-codex-xhigh-fast": { "name": "GPT-5.3 Codex Extra High Fast" },
-        "cursor-acp/gpt-5.3-codex-spark-preview": { "name": "GPT-5.3 Codex Spark" },
-        "cursor-acp/gpt-5.2": { "name": "GPT-5.2" },
-        "cursor-acp/gpt-5.2-high": { "name": "GPT-5.2 High" },
-        "cursor-acp/gpt-5.2-codex": { "name": "GPT-5.2 Codex" },
-        "cursor-acp/gpt-5.2-codex-fast": { "name": "GPT-5.2 Codex Fast" },
-        "cursor-acp/gpt-5.2-codex-low": { "name": "GPT-5.2 Codex Low" },
-        "cursor-acp/gpt-5.2-codex-low-fast": { "name": "GPT-5.2 Codex Low Fast" },
-        "cursor-acp/gpt-5.2-codex-high": { "name": "GPT-5.2 Codex High" },
-        "cursor-acp/gpt-5.2-codex-high-fast": { "name": "GPT-5.2 Codex High Fast" },
-        "cursor-acp/gpt-5.2-codex-xhigh": { "name": "GPT-5.2 Codex Extra High" },
-        "cursor-acp/gpt-5.2-codex-xhigh-fast": { "name": "GPT-5.2 Codex Extra High Fast" },
-        "cursor-acp/gpt-5.1-codex-max": { "name": "GPT-5.1 Codex Max" },
-        "cursor-acp/gpt-5.1-codex-max-high": { "name": "GPT-5.1 Codex Max High" },
-        "cursor-acp/gpt-5.1-codex-mini": { "name": "GPT-5.1 Codex Mini" },
-        "cursor-acp/gpt-5.1-high": { "name": "GPT-5.1 High" },
-        "cursor-acp/gemini-3.1-pro": { "name": "Gemini 3.1 Pro" },
-        "cursor-acp/gemini-3-pro": { "name": "Gemini 3 Pro" },
-        "cursor-acp/gemini-3-flash": { "name": "Gemini 3 Flash" },
-        "cursor-acp/grok": { "name": "Grok" },
-        "cursor-acp/kimi-k2.5": { "name": "Kimi K2.5" }
+        "cursor-acp/opus-4.6": { "name": "Claude 4.6 Opus" }
       }
     }
   }
 }
 ```
 
-> Update models anytime: `cursor-agent models`
-</details>
+**See:** [docs/OPENCODE.md](docs/OPENCODE.md) for full guide
 
-<details>
-<summary><b>Option C</b> — npm global + CLI</summary>
+---
+
+### [oh-my-pi](docs/OH-MY-PI.md)
+
+Register CliCursorProxyAPI as a provider in oh-my-pi:
+
+```typescript
+// ~/.omp/extensions/cursor-acp.ts
+pi.registerProvider("cursor-acp", {
+  baseUrl: "http://127.0.0.1:32124/v1",
+  apiKey: "dummy",  // Ignored; auth handled by cursor-agent
+  api: "openai-completions",
+  models: [
+    { id: "auto", name: "Auto", reasoning: true, ... },
+    { id: "sonnet-4.6", name: "Claude 4.6 Sonnet", ... }
+  ]
+});
+```
+
+**See:** [docs/OH-MY-PI.md](docs/OH-MY-PI.md) for full guide
+
+---
+
+### [Factory Droid](docs/FACTORY-DROID.md)
+
+The proxy is already configured in `.factory/services.yaml`:
+
+```yaml
+services:
+  cursor-proxy:
+    name: cursor-proxy
+    port: 32124
+    start: cd /path/to/CliCursorProxyAPI && bun run proxy
+    healthcheck: curl -sf http://localhost:32124/health
+```
+
+**See:** [docs/FACTORY-DROID.md](docs/FACTORY-DROID.md) for full guide
+
+---
+
+### [curl](docs/OPENCODE.md#testing-the-integration)
+
+Test directly with curl for any OpenAI-compatible client:
 
 ```bash
-npm install -g @rama_nigg/open-cursor
-open-cursor install
+# Health check
+curl http://localhost:32124/health
+
+# List models
+curl http://localhost:32124/v1/models
+
+# Chat completions (streaming)
+curl -X POST http://localhost:32124/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model":"auto","messages":[{"role":"user","content":"Hello"}],"stream":true}'
 ```
 
-Upgrade: `npm update -g @rama_nigg/open-cursor`
-</details>
+## API Endpoints
 
-<details>
-<summary><b>Option D</b> — Go TUI installer</summary>
+### GET /health
 
+Health check endpoint.
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "version": "2.3.20",
+  "auth": "authenticated"
+}
+```
+
+### GET /v1/models
+
+List available models.
+
+**Response:**
+```json
+{
+  "object": "list",
+  "data": [
+    { "id": "auto", "name": "Auto" },
+    { "id": "sonnet-4.6", "name": "Claude 4.6 Sonnet" },
+    { "id": "opus-4.6", "name": "Claude 4.6 Opus" }
+  ]
+}
+```
+
+### POST /v1/chat/completions
+
+Streaming chat completions (OpenAI-compatible).
+
+**Request:**
+```json
+{
+  "model": "auto",
+  "messages": [
+    {"role": "system", "content": "You are helpful."},
+    {"role": "user", "content": "Hello"}
+  ],
+  "stream": true
+}
+```
+
+**Response:** SSE stream with `data:` prefix and `\n\n` terminator.
+
+## Supported Models
+
+| Model Family | Examples | Thinking Support |
+|-------------|----------|------------------|
+| **Claude** | opus-4.6, sonnet-4.6, opus-4.5, sonnet-4.5 | ✓ (thinking variants) |
+| **GPT** | gpt-5.4-xhigh, gpt-5.3-codex, gpt-5.2 | ✗ |
+| **Gemini** | gemini-3.1-pro, gemini-3-pro, gemini-3-flash | ✗ |
+| **Special** | auto, composer-1.5, grok, kimi-k2.5 | Varies |
+
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | 32124 | Proxy server port |
+| `HOST` | 127.0.0.1 | Host to bind to |
+| `TOOL_LOOP_MAX_REPEAT` | 2 | Max tool call repeats before error |
+
+**Example:**
 ```bash
-git clone https://github.com/Nomadcxx/opencode-cursor.git
-cd opencode-cursor
-go build -o ./installer ./cmd/installer && ./installer
+PORT=32125 bun run proxy  # Custom port
 ```
-</details>
-
-<details>
-<summary><b>Option E</b> — LLM paste</summary>
-
-```
-Install open-cursor for OpenCode: edit ~/.config/opencode/opencode.json, add "@rama_nigg/open-cursor@latest" to "plugin", add a "cursor-acp" provider with npm "@ai-sdk/openai-compatible" and models from `cursor-agent models` prefixed with "cursor-acp/". Auth: `cursor-agent login`. Verify: `opencode models | grep cursor-acp`.
-```
-</details>
-
-<details>
-<summary><b>Option F</b> — Manual (from source)</summary>
-
-```bash
-git clone https://github.com/Nomadcxx/opencode-cursor.git && cd opencode-cursor
-bun install && bun run build
-ln -sf $(pwd)/dist/plugin-entry.js ~/.config/opencode/plugin/cursor-acp.js
-./scripts/sync-models.sh
-```
-
-Add `"cursor-acp"` to the `plugin` array and reuse the provider block from Option B.
-</details>
-
-## Authentication
-
-```bash
-opencode auth login   # provider id: cursor-acp
-cursor-agent login    # direct
-```
-
-## Usage
-
-```bash
-opencode run "your prompt" --model cursor-acp/auto
-opencode run "your prompt" --model cursor-acp/sonnet-4.5
-```
-
-## MCP Tool Bridge
-
-Any MCP servers already configured in your `opencode.json` work automatically with cursor-acp models — no extra setup needed. The plugin discovers them at startup and injects usage instructions into the system prompt so the model calls them via cursor-agent's Shell tool.
-
-```bash
-mcptool servers                                    # list discovered servers
-mcptool tools [server]                             # list available tools
-mcptool call hybrid-memory memory_stats            # call a tool manually
-mcptool call playwright browser_navigate '{"url":"https://example.com"}'
-```
-
-Any MCP server using stdio transport works. Tested with hybrid-memory, @modelcontextprotocol/server-filesystem, @playwright/mcp, and @modelcontextprotocol/server-everything.
-
-## Architecture
-
-```mermaid
-flowchart TB
-    OC["OpenCode"] --> SDK["@ai-sdk/openai-compatible"]
-    SDK -->|"POST /v1/chat/completions"| PROXY["open-cursor proxy :32124"]
-    PROXY -->|"spawn per request"| AGENT["cursor-agent --output-format stream-json"]
-    AGENT -->|"HTTPS"| CURSOR["Cursor API"]
-    CURSOR --> AGENT
-
-    AGENT -->|"assistant / thinking events"| SSE["SSE content chunks"]
-    AGENT -->|"tool_call event"| BOUNDARY["Provider boundary (v1 default)"]
-    BOUNDARY --> COMPAT["Schema compat + alias normalization"]
-    COMPAT --> GUARD["Tool-loop guard"]
-    GUARD -->|"emit tool_calls + finish_reason=tool_calls"| SDK
-    SDK --> OC
-
-    OC -->|"execute tool locally"| TOOLRUN["OpenCode tool runtime"]
-    TOOLRUN -->|"next request includes role:tool result"| SDK
-    SDK -->|"TOOL_RESULT prompt block"| AGENT
-
-    AGENT -->|"Shell tool_call"| MCPTOOL["mcptool CLI"]
-    MCPTOOL -->|"stdio"| MCP["MCP Servers"]
-    MCP --> MCPTOOL
-    MCPTOOL --> AGENT
-```
-
-Default mode: `CURSOR_ACP_TOOL_LOOP_MODE=opencode`. Details: [docs/architecture/runtime-tool-loop.md](docs/architecture/runtime-tool-loop.md).
-
-## Alternatives
-THERE is currently not a single perfect plugin for cursor in opencode, my advice is stick with what is the LEAST worst option for you.
-|                   |        open-cursor         | [yet-another-opencode-cursor-auth](https://github.com/Yukaii/yet-another-opencode-cursor-auth) | [opencode-cursor-auth](https://github.com/POSO-PocketSolutions/opencode-cursor-auth) | [cursor-opencode-auth](https://github.com/R44VC0RP/cursor-opencode-auth) |
-| ----------------- | :------------------------: | :--------------------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------: | :----------------------------------------------------------------------: |
-| **Architecture**  | HTTP proxy via cursor-agent |                                       Direct Connect-RPC                                       |                             HTTP proxy via cursor-agent                              |                       Direct Connect-RPC/protobuf                        |
-| **Platform**      |       Linux, macOS         |                                          Linux, macOS                                          |                                     Linux, macOS                                     |                          macOS only (Keychain)                           |
-| **Max Prompt**    |   Unlimited (HTTP body)    |                                            Unknown                                             |                                   ~128KB (ARG_MAX)                                   |                                 Unknown                                  |
-| **Streaming**     |           ✓ SSE            |                                             ✓ SSE                                              |                                     Undocumented                                     |                                    ✓                                     |
-| **Error Parsing** |   ✓ (quota/auth/model)     |                                               ✗                                                |                                          ✗                                           |                              Debug logging                               |
-| **Installer**     |     ✓ TUI + one-liner      |                                               ✗                                                |                                          ✗                                           |                                    ✗                                     |
-| **OAuth Flow**    |  ✓ OpenCode integration    |                                            ✓ Native                                            |                                    Browser login                                     |                                 Keychain                                 |
-| **Tool Calling**  | ✓ OpenCode-owned loop |                                            ✓ Native                                            |                                    ✓ Experimental                                    |                                    ✗                                     |
-| **MCP Bridge**    | ✓ mcptool CLI (any MCP server) |                                               ✗                                                |                                          ✗                                           |                                    ✗                                     |
-| **Stability**     | Stable (uses official CLI) |                                          Experimental                                          |                                        Stable                                        |                               Experimental                               |
-| **Dependencies**  |     bun, cursor-agent      |                                              npm                                               |                                  bun, cursor-agent                                   |                               Node.js 18+                                |
-| **Port**          |           32124            |                                             18741                                              |                                        32123                                         |                                   4141                                   |
 
 ## Troubleshooting
 
-- `fetch() URL is invalid` → `opencode auth login`
-- Model not responding → `cursor-agent login`
-- Quota exceeded → [cursor.com/settings](https://cursor.com/settings)
-- Auth failed → `CURSOR_ACP_LOG_LEVEL=debug opencode auth login cursor-acp`
+### Proxy won't start
 
-Debug logging: `CURSOR_ACP_LOG_LEVEL=debug opencode run "your prompt" --model cursor-acp/auto`
+**Error:** `Port 32124 already in use`
 
-## Roadmap
+**Solution:**
+1. Check what's using the port: `lsof -i :32124`
+2. Stop the conflicting process OR use a different port:
+   ```bash
+   PORT=32125 bun run proxy
+   ```
 
-```mermaid
-flowchart LR
-    P1[/Stabilise/] --> P2[/MCP Bridge/] --> P3[/Simplify/] --> P4[/ACP + MCP/]
+---
 
-    style P1 fill:#264653,stroke:#1d3557,color:#fff
-    style P2 fill:#264653,stroke:#1d3557,color:#fff
-    style P3 fill:#495057,stroke:#343a40,color:#adb5bd
-    style P4 fill:#495057,stroke:#343a40,color:#adb5bd
+### Authentication fails
+
+**Error:** `auth: "not_authenticated"` in health response
+
+**Solution:**
+1. Verify cursor-agent is installed: `cursor-agent --version`
+2. Login: `cursor-agent login`
+3. Verify auth: `curl http://localhost:32124/health`
+
+---
+
+### Model not found
+
+**Error:** `400 Bad Request` with model_not_found
+
+**Solution:**
+1. Verify model name is correct (e.g., `auto`, `sonnet-4.6`)
+2. Check available models: `curl http://localhost:32124/v1/models`
+
+---
+
+### Streaming stops unexpectedly
+
+**Possible causes:**
+1. Authentication expired → Run `cursor-agent login` again
+2. Rate limit hit → Wait and retry, or check [cursor.com/settings](https://cursor.com/settings)
+3. Tool loop detected → Proxy prevents infinite loops after threshold
+
+---
+
+### Connection refused
+
+**Error:** `Failed to connect to localhost:32124`
+
+**Solution:**
+1. Verify proxy is running: `ps aux | grep proxy`
+2. Start the proxy: `bun run proxy`
+3. Check port: `lsof -i :32124`
+
+---
+
+### Quota exceeded
+
+**Error:** `429 Too Many Requests`
+
+**Solution:**
+1. Check usage at [cursor.com/settings](https://cursor.com/settings)
+2. Wait for quota reset
+3. Reduce request frequency
+
+## Advanced Topics
+
+### MCP Tool Bridge
+
+Any MCP servers configured in OpenCode work automatically through the proxy. The proxy uses `mcptool` CLI to bridge MCP servers into Cursor models.
+
+```bash
+# List discovered MCP servers
+mcptool servers
+
+# List available tools
+mcptool tools [server]
+
+# Call a tool manually
+mcptool call hybrid-memory memory_stats
 ```
 
-[X] **Stabilise** — Clean up dead code, fix test isolation
-[X] **MCP Bridge** — Bridge MCP servers into Cursor models via `mcptool` CLI
-[ ] **Simplify** — Rip out serialisation layers
-[ ] **ACP + MCP** — Structured protocols end-to-end
+### Tool Loop Guard
 
-`Future Architecture` — Long-term direction is `OpenCode -> Cursor ACP -> MCP`, using official Cursor ACP as the backend. Currently deferred: Cursor ACP does not yet reliably propagate MCP servers during ACP session setup. See [docs/architecture/cursor-acp-mcp-future.md](docs/architecture/cursor-acp-mcp-future.md).
+The proxy includes protection against infinite tool loops. If the same tool is called repeatedly (default: 2 times), the proxy returns an error to prevent runaway loops.
+
+Configure via: `TOOL_LOOP_MAX_REPEAT=3 bun run proxy`
+
+### Remote Server
+
+To run the proxy on a remote server:
+
+1. Start proxy with `HOST=0.0.0.0`:
+   ```bash
+   HOST=0.0.0.0 bun run proxy
+   ```
+2. Update client baseURL to `http://your-server:32124/v1`
+3. **Security note:** Use firewall rules or VPN to restrict access
+
+## Project Structure
+
+```
+CliCursorProxyAPI/
+├── src/
+│   ├── proxy/
+│   │   ├── server.ts           # HTTP server
+│   │   ├── handler.ts          # Request routing
+│   │   └── standalone-server.ts # Standalone entry
+│   ├── streaming/
+│   │   ├── parser.ts           # NDJSON → SSE conversion
+│   │   ├── line-buffer.ts      # Line buffering
+│   │   └── delta-tracker.ts    # Delta tracking
+│   ├── auth.ts                 # Authentication
+│   └── models/
+│       └── sync.ts             # Model list sync
+├── docs/
+│   ├── OPENCODE.md             # OpenCode integration
+│   ├── OH-MY-PI.md             # oh-my-pi integration
+│   ├── FACTORY-DROID.md        # Factory Droid integration
+│   └── architecture/           # Architecture docs
+├── tests/
+│   ├── unit/                   # Unit tests
+│   └── integration/            # Integration tests
+└── package.json
+```
+
+## Testing
+
+```bash
+# Install dependencies
+bun install
+
+# Run all tests
+bun test
+
+# Run unit tests only
+bun run test:unit
+
+# Typecheck
+bun run typecheck
+
+# Lint
+bun run lint
+```
+
+## Comparison with Alternatives
+
+| Feature | CliCursorProxyAPI | yet-another-opencode-cursor-auth | opencode-cursor-auth |
+|---------|------------------|--------------------------------|---------------------|
+| **Architecture** | HTTP proxy via cursor-agent | Direct Connect-RPC | HTTP proxy via cursor-agent |
+| **Platform** | Linux, macOS | Linux, macOS | Linux, macOS |
+| **Max Prompt** | Unlimited (HTTP body) | Unknown | ~128KB (ARG_MAX) |
+| **Streaming** | ✓ SSE | ✓ SSE | Undocumented |
+| **Tool Calling** | ✓ OpenCode-owned loop | ✓ Native | ✓ Experimental |
+| **MCP Bridge** | ✓ mcptool CLI | ✗ | ✗ |
 
 ## License
 
-BSD-3-Clause
+BSD-3-Clause — See [LICENSE](LICENSE)
+
+## References
+
+- [cursor-agent CLI](https://cursor.com)
+- [OpenCode](https://opencode.ai)
+- [oh-my-pi](https://github.com/can1357/oh-my-pi)
+- [Factory Droids](https://github.com/FactoryMachines/factory-droids)
+- [OpenAI Chat Completions API](https://platform.openai.com/docs/api-reference/chat)
