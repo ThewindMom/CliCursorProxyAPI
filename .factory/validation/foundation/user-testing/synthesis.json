@@ -1,6 +1,6 @@
 {
   "milestone": "foundation",
-  "round": 4,
+  "round": 5,
   "status": "fail",
   "assertionsSummary": {
     "total": 16,
@@ -26,11 +26,11 @@
   "failedAssertions": [
     {
       "id": "VAL-AUTH-002",
-      "reason": "The fix correctly removed file-based fallback and now uses `cursor-agent status` for auth detection. /health correctly shows 'not_authenticated' when cursor-agent is not logged in. However, the underlying architectural issue remains: cursor-agent stores tokens internally and not in ~/.cursor/ files. Cannot verify authenticated case without logged-in cursor-agent."
+      "reason": "Auth detection correctly uses `cursor-agent status`. /health shows 'auth': 'not_authenticated' when cursor-agent is not logged in. Cannot verify authenticated case without logged-in cursor-agent. cli-config.json only contains user settings (permissions, editor, model preferences) - no access tokens."
     },
     {
       "id": "VAL-AUTH-003",
-      "reason": "cli-config.json does not contain an access token - only user settings (permissions, editor, model preferences). cursor-agent stores tokens internally, not in files accessible to the proxy. This is an architectural limitation that cannot be resolved - cursor-agent's auth mechanism does not expose tokens to external processes."
+      "reason": "Architectural limitation: cursor-agent stores tokens internally, not in ~/.cursor/ files. cli-config.json only has user settings, NOT access tokens. This cannot be resolved without changing cursor-agent behavior."
     }
   ],
   "blockedAssertions": [
@@ -40,25 +40,23 @@
     },
     {
       "id": "VAL-PROXY-005",
-      "blockedBy": "Cannot test 401 for missing auth because: (1) model validation now happens before auth check (fix for VAL-ERROR-003), (2) without authenticated cursor-agent, cannot determine which models are valid to test auth with a known model. Requires authenticated cursor-agent to establish valid model list."
+      "blockedBy": "Cannot test 401 for missing auth because: (1) model validation happens before auth check (correct behavior per VAL-ERROR-003 fix), (2) without authenticated cursor-agent, cannot determine which models are valid. Requires authenticated cursor-agent to establish valid model list."
     }
   ],
   "appliedUpdates": [],
-  "fixesVerified": [
-    {
-      "assertion": "VAL-ERROR-003",
-      "fixCommit": "a94c06b fix: validate model before auth check",
-      "status": "VERIFIED - now returns HTTP 400 for unknown model"
-    },
-    {
-      "assertion": "VAL-AUTH-002",
-      "fixCommit": "9caabeb fix: remove file-based fallback from verifyCursorAuth()",
-      "status": "FIX VERIFIED - auth detection now uses `cursor-agent status`. /health correctly shows 'not_authenticated' when not logged in. However, cannot verify authenticated case without logged-in cursor-agent."
-    },
-    {
-      "assertion": "VAL-STREAM-001",
-      "status": "VERIFIED - Inferred from passing SSE assertions. The parseStreamLine function in standalone-server.ts correctly parses cursor-agent NDJSON output. Since VAL-STREAM-002 (text in SSE), VAL-STREAM-003 (thinking in SSE), VAL-STREAM-004 (tool_calls in SSE), and VAL-STREAM-005 ([DONE] termination) all passed, the underlying NDJSON parsing must be working correctly."
-    }
-  ],
+  "fixesVerified": [],
+  "environmentStatus": {
+    "cursorAgentAuthenticated": false,
+    "cursorAgentStatus": "Not logged in",
+    "proxyRunning": true,
+    "proxyPort": 32124,
+    "verifiedAssertions": [
+      "VAL-PROXY-001: Health endpoint returns 200 with status ok",
+      "VAL-PROXY-002: Models endpoint returns 200 with empty list (expected without auth)",
+      "VAL-ERROR-001: Invalid JSON returns 400 with proper error",
+      "VAL-ERROR-003: Unknown model returns 400 with model_not_found"
+    ]
+  },
+  "notes": "Re-run verification. cursor-agent is not logged in (requires interactive login). Previously-passed assertions verified where possible without auth. Same 4 assertions remain failed/blocked due to architectural limitations and auth requirements.",
   "previousRound": ".factory/validation/foundation/user-testing/synthesis.json"
 }
