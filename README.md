@@ -413,7 +413,7 @@ bun run lint
 
 ## License
 
-BSD-3-Clause — See [LICENSE](LICENSE)
+ISC — See [LICENSE](LICENSE)
 
 ## References
 
