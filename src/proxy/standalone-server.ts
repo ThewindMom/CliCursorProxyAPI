@@ -45,7 +45,15 @@ function stripAnsi(str: string): string {
   return str.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, "");
 }
 
-function parseAgentError(stderr: string | unknown): { message: string; userMessage: string } {
+interface AgentError {
+  message: string;
+  userMessage: string;
+  statusCode: number;
+  type: string;
+  code: string;
+}
+
+function parseAgentError(stderr: string | unknown): AgentError {
   const input = typeof stderr === "string" ? stderr : String(stderr ?? "");
   const clean = stripAnsi(input).trim();
 
@@ -53,26 +61,38 @@ function parseAgentError(stderr: string | unknown): { message: string; userMessa
     return {
       message: clean,
       userMessage: "Not authenticated with Cursor. Run: cursor-agent login",
+      statusCode: 401,
+      type: "authentication_error",
+      code: "not_authenticated",
     };
   }
 
-  if (clean.includes("usage limit") || clean.includes("hit your usage limit")) {
+  if (clean.includes("usage limit") || clean.includes("hit your usage limit") || clean.includes("rate limit")) {
     return {
       message: clean,
-      userMessage: "You've hit your Cursor usage limit",
+      userMessage: "You've hit your Cursor usage or rate limit. Please wait and try again later.",
+      statusCode: 429,
+      type: "rate_limit_error",
+      code: "quota_exceeded",
     };
   }
 
-  if (clean.includes("model not found") || clean.includes("invalid model")) {
+  if (clean.includes("model not found") || clean.includes("invalid model") || clean.includes("unknown model")) {
     return {
       message: clean,
       userMessage: clean.substring(0, 200) || "Model not available",
+      statusCode: 400,
+      type: "invalid_request_error",
+      code: "model_not_found",
     };
   }
 
   return {
     message: clean,
     userMessage: clean.substring(0, 200) || "An error occurred",
+    statusCode: 500,
+    type: "internal_error",
+    code: "server_error",
   };
 }
 
@@ -323,13 +343,34 @@ async function handleChatCompletions(
     body = JSON.parse(bodyStr || "{}");
   } catch {
     res.writeHead(400, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ error: "Invalid JSON body" }));
+    res.end(JSON.stringify({
+      error: {
+        message: "Invalid JSON body",
+        type: "invalid_request_error",
+        code: "invalid_json",
+        status: 400,
+      }
+    }));
     return;
   }
 
   const messages: Array<any> = Array.isArray(body?.messages) ? body.messages : [];
   const stream = body?.stream === true;
   const model = body?.model || "auto";
+
+  // Validate messages are present
+  if (messages.length === 0) {
+    res.writeHead(400, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({
+      error: {
+        message: "messages is required",
+        type: "invalid_request_error",
+        code: "missing_messages",
+        status: 400,
+      }
+    }));
+    return;
+  }
 
   // Build prompt from messages
   const prompt = buildPrompt(messages);
@@ -368,21 +409,16 @@ async function handleChatCompletions(
 
       if (code !== 0 && !stdout) {
         const parsed = parseAgentError(stderr);
-        const errorResponse = {
-          id,
-          object: "chat.completion",
-          created,
-          model,
-          choices: [
-            {
-              index: 0,
-              message: { role: "assistant", content: `cursor-proxy error: ${parsed.userMessage}` },
-              finish_reason: "stop",
-            },
-          ],
-        };
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify(errorResponse));
+        // Return proper HTTP error with OpenAI error format
+        res.writeHead(parsed.statusCode, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({
+          error: {
+            message: parsed.userMessage,
+            type: parsed.type,
+            code: parsed.code,
+            status: parsed.statusCode,
+          }
+        }));
         return;
       }
 
@@ -512,7 +548,12 @@ async function handleChatCompletions(
     // Check for errors (non-zero exit code with no output)
     if (code !== 0 && !state.sawAssistantPartials && !state.assistantBuffer) {
       const parsed = parseAgentError(stderrBuffer);
-      const errorChunk = createChunk(id, created, model, { content: `cursor-proxy error: ${parsed.userMessage}` }, true);
+      // Log the error for debugging
+      console.error(`cursor-agent error (${parsed.statusCode}): ${parsed.message}`);
+      // For streaming, we include error info in the chunk
+      const errorChunk = createChunk(id, created, model, { 
+        content: `cursor-proxy error: ${parsed.userMessage}` 
+      }, true);
       res.write(formatSseChunk(errorChunk));
       res.write(formatSseDone());
       res.end();
@@ -544,6 +585,7 @@ async function handleChatCompletions(
   });
 
   child.on("error", (err) => {
+    console.error(`cursor-agent spawn error: ${err.message}`);
     const errorChunk = createChunk(id, created, model, { content: `cursor-proxy error: ${err.message}` }, true);
     res.write(formatSseChunk(errorChunk));
     res.write(formatSseDone());
