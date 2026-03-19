@@ -302,30 +302,7 @@ async function handleChatCompletions(
   res: ServerResponse,
   workspaceDir: string,
 ): Promise<void> {
-  // Check authentication before processing
-  let authError: AuthenticationError | null = null;
-  try {
-    requireCursorAuth();
-  } catch (err) {
-    if (err instanceof AuthenticationError) {
-      authError = err;
-    } else {
-      throw err;
-    }
-  }
-
-  if (authError) {
-    res.writeHead(401, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({
-      error: {
-        message: authError.userMessage,
-        type: "authentication_error",
-        code: 401,
-      }
-    }));
-    return;
-  }
-
+  // Read request body first
   const chunks: Buffer[] = [];
 
   for await (const chunk of req) {
@@ -367,6 +344,56 @@ async function handleChatCompletions(
         type: "invalid_request_error",
         code: "missing_messages",
         status: 400,
+      }
+    }));
+    return;
+  }
+
+  // Validate model BEFORE checking auth (VAL-ERROR-003 fix)
+  // Fetch available models and check if the requested model is valid
+  try {
+    const availableModels = await fetchModels();
+    const modelIds = availableModels.map(m => m.id);
+    
+    // Check if model is in the available list (case-insensitive comparison)
+    const isValidModel = modelIds.some(id => id.toLowerCase() === model.toLowerCase());
+    
+    if (!isValidModel) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({
+        error: {
+          message: `Unknown model: ${model}`,
+          type: "invalid_request_error",
+          code: "model_not_found",
+          status: 400,
+        }
+      }));
+      return;
+    }
+  } catch (err) {
+    // If we can't fetch models, don't block - let cursor-agent handle validation
+    // This prevents auth errors from masking model validation
+  }
+
+  // Check authentication AFTER model validation
+  let authError: AuthenticationError | null = null;
+  try {
+    requireCursorAuth();
+  } catch (err) {
+    if (err instanceof AuthenticationError) {
+      authError = err;
+    } else {
+      throw err;
+    }
+  }
+
+  if (authError) {
+    res.writeHead(401, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({
+      error: {
+        message: authError.userMessage,
+        type: "authentication_error",
+        code: 401,
       }
     }));
     return;
