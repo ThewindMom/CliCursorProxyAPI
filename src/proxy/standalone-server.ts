@@ -99,7 +99,7 @@ function createChunk(id: string, created: number, model: string, delta: object, 
   };
 }
 
-async function fetchModels(): Promise<Array<{ id: string; object: string; created: number; owned_by: string }>> {
+async function fetchModels(): Promise<Array<{ id: string; object: string; created: number; owned_by: string; name: string }>> {
   return new Promise((resolve, reject) => {
     const child = spawn("cursor-agent", ["models"], {
       stdio: ["ignore", "pipe", "pipe"],
@@ -122,7 +122,7 @@ async function fetchModels(): Promise<Array<{ id: string; object: string; create
         return;
       }
 
-      const models: Array<{ id: string; object: string; created: number; owned_by: string }> = [];
+      const models: Array<{ id: string; object: string; created: number; owned_by: string; name: string }> = [];
       const lines = stripAnsi(stdout).split("\n");
 
       for (const line of lines) {
@@ -131,6 +131,7 @@ async function fetchModels(): Promise<Array<{ id: string; object: string; create
         if (match) {
           models.push({
             id: match[1],
+            name: match[2].trim(),
             object: "model",
             created: Math.floor(Date.now() / 1000),
             owned_by: "cursor",
