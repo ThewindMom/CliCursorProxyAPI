@@ -242,25 +242,12 @@ function checkCursorAgentStatus(): boolean {
 }
 
 export function verifyCursorAuth(): boolean {
-  // First try using cursor-agent status (the correct way)
-  const agentAuth = checkCursorAgentStatus();
-  if (agentAuth) {
-    return true;
-  }
-  
-  // Fallback: check for auth files (legacy behavior for backward compatibility)
-  // This handles edge cases where cursor-agent status fails but auth files exist
-  const possiblePaths = getPossibleAuthPaths();
-  
-  for (const authPath of possiblePaths) {
-    if (existsSync(authPath)) {
-      log.debug("Auth file found (fallback)", { path: authPath });
-      return true;
-    }
-  }
-  
-  log.debug("No auth file found (fallback)", { checkedPaths: possiblePaths });
-  return false;
+  // Only rely on cursor-agent status for auth detection.
+  // File-based fallback was removed because cli-config.json only contains
+  // user settings (email, userId, permissions) - NOT access tokens.
+  // The actual token is stored internally by cursor-agent and not accessible
+  // to the proxy, so file existence does NOT indicate authentication.
+  return checkCursorAgentStatus();
 }
 
 /**

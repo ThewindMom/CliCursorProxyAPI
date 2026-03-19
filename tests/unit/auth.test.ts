@@ -100,30 +100,11 @@ describe("Auth Module", () => {
 
   describe("verifyCursorAuth", () => {
     it("should return false when not authenticated", () => {
+      // verifyCursorAuth now only relies on cursor-agent status
+      // In test environment with short timeout, cursor-agent status will fail/timeout
+      // and return false (not authenticated)
       const result = verifyCursorAuth();
       expect(result).toBe(false);
-    });
-
-    it("should return true when auth file exists (fallback)", () => {
-      const paths = authPaths();
-      if (!existsSync(paths.testAuthDir)) {
-        mkdirSync(paths.testAuthDir, { recursive: true });
-      }
-      writeFileSync(paths.testConfigAuthFile, JSON.stringify({ token: "test" }));
-      
-      const result = verifyCursorAuth();
-      expect(result).toBe(true);
-    });
-
-    it("should return true when cli-config.json exists (fallback)", () => {
-      const paths = authPaths();
-      if (!existsSync(paths.testCliConfigDir)) {
-        mkdirSync(paths.testCliConfigDir, { recursive: true });
-      }
-      writeFileSync(paths.testCursorCliConfigFile, JSON.stringify({ accessToken: "test" }));
-
-      const result = verifyCursorAuth();
-      expect(result).toBe(true);
     });
   });
 
