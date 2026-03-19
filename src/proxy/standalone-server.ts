@@ -42,7 +42,7 @@ const DEFAULT_HOST = "127.0.0.1";
 // MCP Bridge - global instance shared across requests
 let mcpClientManager: McpClientManager | null = null;
 let mcpInitialized = false;
-let mcpTools: Map<string, { serverName: string; toolName: string }> = new Map();
+let mcpTools: Map<string, { serverName: string; toolName: string; description?: string; inputSchema?: Record<string, unknown> }> = new Map();
 
 /**
  * Initialize the MCP bridge - connect to MCP servers configured in opencode.json
@@ -67,7 +67,12 @@ async function initMcpBridge(): Promise<void> {
     const tools = mcpClientManager.listTools();
     for (const tool of tools) {
       const namespacedName = `mcp__${tool.serverName}__${tool.name}`;
-      mcpTools.set(namespacedName, { serverName: tool.serverName, toolName: tool.name });
+      mcpTools.set(namespacedName, {
+        serverName: tool.serverName,
+        toolName: tool.name,
+        description: tool.description,
+        inputSchema: tool.inputSchema,
+      });
     }
 
     console.log(`MCP bridge: connected to ${mcpClientManager.connectedServers.length} server(s), discovered ${mcpTools.size} tool(s)`);
@@ -936,6 +941,8 @@ async function handleRequest(
           id: namespacedName,
           name: toolInfo.toolName,
           server: toolInfo.serverName,
+          description: toolInfo.description,
+          inputSchema: toolInfo.inputSchema,
         });
       }
 
