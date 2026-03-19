@@ -407,7 +407,8 @@ async function handleChatCompletions(
       const stdout = Buffer.concat(stdoutChunks).toString().trim();
       const stderr = Buffer.concat(stderrChunks).toString().trim();
 
-      if (code !== 0 && !stdout) {
+      if (code !== 0) {
+        // Non-zero exit code always indicates an error, regardless of stdout content
         const parsed = parseAgentError(stderr);
         // Return proper HTTP error with OpenAI error format
         res.writeHead(parsed.statusCode, { "Content-Type": "application/json" });
