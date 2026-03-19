@@ -1,0 +1,33 @@
+{
+  "featureId": "fix-readme-accuracy",
+  "reviewedAt": "2026-03-19T22:55:00Z",
+  "commitId": "ea0d6f0",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The fix partially addressed the original blocking issues but left one significant accuracy problem unfixed. The clone URL was corrected to opencode-cursor, and the license badge at the top of the README was changed from BSD-3-Clause to ISC. However, the License section (line 416) still contains 'BSD-3-Clause — See [LICENSE](LICENSE)' which contradicts package.json's ISC license.",
+    "issues": [
+      {
+        "file": "README.md",
+        "line": 416,
+        "severity": "blocking",
+        "description": "License section still shows 'BSD-3-Clause — See [LICENSE](LICENSE)' but package.json license is 'ISC'. The fix only updated the license badge at the top of the README (line 5) but did not update the License section text at line 416. This leaves a factual inconsistency that could confuse users about the project's license."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The worker's verification used grep 'License:' which matched the badge line ([![License: ISC...]) at line 5 but did not catch the 'BSD-3-Clause' text in the License section at line 416. This verification approach was insufficient to catch all license-related inconsistencies.",
+      "evidence": "Transcript shows verification command: grep 'License:' README.md - this only matches the badge text, not the BSD-3-Clause text in the License section. A more thorough verification would use: grep 'BSD-3-Clause' README.md or read the License section directly."
+    },
+    {
+      "area": "skills",
+      "observation": "The worker skill did not provide guidance on verifying documentation accuracy comprehensively (e.g., checking all occurrences of a term, not just the first match).",
+      "evidence": "The worker followed the basic procedure but the verification step only checked for the presence of corrected text, not the absence of incorrect text. A better verification would be: grep -c 'BSD-3-Clause' README.md should return 0."
+    }
+  ],
+  "addressesFailureFrom": "/Users/thewindmom/Developer/01_Random_Coding/opencode-cursor/.factory/validation/documentation/scrutiny/reviews/readme-documentation.json",
+  "summary": "The fix-readme-accuracy feature partially addressed the original failure. It correctly fixed the clone URL from CliCursorProxyAPI to opencode-cursor (blocking issue #1 ✓). For blocking issue #2 (license inconsistency), it fixed the license badge at the top of the README but failed to fix the License section text at line 416 which still shows BSD-3-Clause. This is a fail because the README still contains an inaccurate license statement that contradicts package.json."
+}

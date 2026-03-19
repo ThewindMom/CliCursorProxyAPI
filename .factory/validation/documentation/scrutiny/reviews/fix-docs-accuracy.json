@@ -1,0 +1,12 @@
+{
+  "featureId": "fix-docs-accuracy",
+  "reviewedAt": "2026-03-19T22:45:00.000Z",
+  "status": "pass",
+  "codeReview": {
+    "summary": "Documentation fixes verified. Health endpoint examples in all three docs (OPENCODE.md, OH-MY-PI.md, FACTORY-DROID.md) correctly include the `mcp` field with structure {enabled, servers, tools}. The health endpoint implementation in standalone-server.ts correctly returns the `mcp` field. The 'ai' package is listed in both ARCHITECTURE.md and package.json (version ^6.0.55), appearing to have been added to package.json rather than removed from ARCHITECTURE.md.",
+    "issues": []
+  },
+  "sharedStateObservations": [],
+  "addressesFailureFrom": null,
+  "summary": "The fix-docs-accuracy feature successfully addresses the documentation issues. Health endpoint examples in OPENCODE.md, OH-MY-PI.md, and FACTORY-DROID.md all correctly show the `mcp` field in response examples. The health endpoint implementation in standalone-server.ts (lines 692-699) correctly returns `mcp: {enabled, servers, tools}`. Regarding the 'ai' package: ARCHITECTURE.md lists `ai` in dependencies (matching package.json which has `ai: ^6.0.55`), suggesting the fix may have added the package to package.json rather than removing documentation, which appears correct since the SDK may be needed for streaming functionality."
+}

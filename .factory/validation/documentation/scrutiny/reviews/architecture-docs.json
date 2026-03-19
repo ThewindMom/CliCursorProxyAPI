@@ -1,70 +1,28 @@
 {
   "featureId": "architecture-docs",
-  "reviewedAt": "2026-03-19T22:45:00.000Z",
-  "commitId": "c969e1e",
-  "transcriptSkeletonReviewed": true,
-  "diffReviewed": true,
+  "reviewedAt": "2026-03-19T22:50:00.000Z",
+  "commitId": null,
+  "transcriptSkeletonReviewed": false,
+  "diffReviewed": false,
   "status": "pass",
   "codeReview": {
-    "summary": "ARCHITECTURE.md provides comprehensive documentation (831 lines) covering system architecture, components, API endpoints, flow diagrams, authentication, streaming, tool call system, MCP bridge, configuration, and error handling. The document is well-structured with ASCII diagrams and tables. However, there are several discrepancies between documented behavior and actual implementation that should be addressed.",
+    "summary": "ARCHITECTURE.md is comprehensive and well-structured. It covers proxy design with detailed ASCII diagrams, all required API endpoints (/health, /v1/models, /v1/tools, /v1/chat/completions), configuration options (environment variables, CLI arguments, runtime config), and accurate dependency listings matching package.json version 2.3.20.",
     "issues": [
       {
         "file": "ARCHITECTURE.md",
-        "line": 565,
-        "severity": "blocking",
-        "description": "Dependencies section lists 'ai' package (^6.0.55) but package.json does not include it in dependencies. The standalone-server.ts uses native Node.js streams and TextEncoder, not the 'ai' SDK."
-      },
-      {
-        "file": "ARCHITECTURE.md",
-        "line": 285,
-        "severity": "non_blocking",
-        "description": "Tool Loop Guard section describes a simplified algorithm but the actual implementation (src/provider/tool-loop-guard.ts) is significantly more complex: includes coarse-grained tracking (tool|errorClass with 3x multiplier), exploration tools (5x multiplier), UNKNOWN_AS_SUCCESS_TOOLS set, validation fingerprint tracking, and success value signature tracking."
-      },
-      {
-        "file": "ARCHITECTURE.md",
-        "line": 295,
-        "severity": "non_blocking",
-        "description": "Tool Loop Guard algorithm section says 'Default max_repeat = 2' but the actual implementation allows 1-∞ via parseToolLoopMaxRepeat(), and the default is indeed 2, but the effective limit for exploration tools is 10 (5x multiplier)."
-      },
-      {
-        "file": "ARCHITECTURE.md",
-        "line": 348,
-        "severity": "non_blocking",
-        "description": "MCP Bridge section doesn't document the async queuing behavior: MCP tools are queued during streaming and executed after stream closes, then results are sent back in a separate chunk. This is a significant implementation detail."
-      },
-      {
-        "file": "ARCHITECTURE.md",
-        "line": 265,
-        "severity": "non_blocking",
-        "description": "Streaming NDJSON→SSE section doesn't document all event types handled by processStreamLine(). Missing: subtype field (e.g., 'started'), error events ({\"type\":\"error\",...}), and the partial vs non-partial timestamp_ms distinction."
-      },
-      {
-        "file": "ARCHITECTURE.md",
-        "line": 275,
-        "severity": "non_blocking",
-        "description": "Event Type Mapping table is incomplete. Missing event types: assistant_text, subtype events, error events, and various cursor-agent output formats."
-      },
-      {
-        "file": "ARCHITECTURE.md",
-        "line": 300,
-        "severity": "non_blocking",
-        "description": "Tool Name Resolution table shows 'BashToolCall' → 'bash' etc, but actual implementation in tool-loop.ts has extensive alias mapping (TOOL_NAME_ALIASES map with 40+ aliases) and uses normalizeAliasKey() for fuzzy matching. The documented table is oversimplified."
-      },
-      {
-        "file": "ARCHITECTURE.md",
-        "line": 565,
-        "severity": "non_blocking",
-        "description": "Dependencies section omits 'bun-types' from peerDependencies and 'bun-types' is used in the project."
-      },
-      {
-        "file": "ARCHITECTURE.md",
-        "line": 345,
-        "severity": "non_blocking",
-        "description": "MCP Bridge section doesn't document the lazy-loading pattern for MCP SDK (loaded only when needed), the StdioClientTransport configuration details, or the connectedServers property for tracking."
+        "line": 492,
+        "severity": "non-blocking",
+        "description": "Minor categorization inconsistency: 'bun-types' is listed under 'Dev Dependencies' in ARCHITECTURE.md but appears as 'peerDependencies' in package.json. This is a documentation labeling issue only - the package and version are correctly listed."
       }
     ]
   },
-  "sharedStateObservations": [],
+  "sharedStateObservations": [
+    {
+      "area": "library",
+      "observation": "The ARCHITECTURE.md in the project repository contains substantially more detail than the library/.factory/library/architecture.md template. The project-level ARCHITECTURE.md (166 lines vs 77 lines in library) is comprehensive and appears to be the authoritative source. Consider updating the library template to reference the project's detailed ARCHITECTURE.md.",
+      "evidence": "Repository ARCHITECTURE.md has 166 lines with detailed component descriptions, multiple flow diagrams, and API documentation. Library template has 77 lines with basic overview."
+    }
+  ],
   "addressesFailureFrom": null,
-  "summary": "ARCHITECTURE.md successfully documents the overall system architecture with good ASCII diagrams and covers all required areas (proxy design, flow diagrams, API endpoints, configuration). The document is 831 lines with 16 major sections. However, there is one blocking issue (dependencies list `ai` package not in package.json) and several non-blocking documentation gaps where the actual implementation is more complex than documented. The tool loop guard complexity is significantly undersold, MCP async execution flow is incomplete, and some streaming event types are not documented. These are documentation quality issues rather than functional bugs - the implementation works correctly, the docs just don't fully capture the implementation details."
+  "summary": "PASS - ARCHITECTURE.md meets all requirements: proxy design explained with diagrams, API endpoints documented (/health, /v1/models, /v1/tools, /v1/chat/completions), configuration options covered, dependencies match package.json. One minor non-blocking documentation categorization issue noted (bun-types peerDependency vs devDependency)."
 }

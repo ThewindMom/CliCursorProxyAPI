@@ -1,40 +1,27 @@
 {
   "featureId": "client-integration-docs",
-  "reviewedAt": "2026-03-19T22:45:00Z",
+  "reviewedAt": "2026-03-19T22:50:00Z",
   "commitId": "c969e1e6d5e8a4f7c8b3d9e2a1f6c0d5b8e4a2f6",
   "transcriptSkeletonReviewed": true,
   "diffReviewed": true,
-  "status": "fail",
+  "status": "pass",
   "codeReview": {
-    "summary": "All three client integration docs (OPENCODE.md, OH-MY-PI.md, FACTORY-DROID.md) exist and contain substantial content with setup instructions, configuration examples, and troubleshooting sections. However, there is a blocking issue: the health endpoint response examples are incomplete and don't match the actual implementation response format.",
+    "summary": "All three client integration docs (OPENCODE.md, OH-MY-PI.md, FACTORY-DROID.md) exist with comprehensive content covering setup instructions, configuration examples, verification steps, troubleshooting, and architecture diagrams. The health endpoint response examples in all three files include the `mcp` field (verified fixed by commit e3ad0bf from fix-docs-accuracy feature). Configuration examples are internally consistent and follow the expected format for each client.",
     "issues": [
       {
-        "file": "docs/OPENCODE.md",
-        "line": 57,
-        "severity": "blocking",
-        "description": "Health endpoint response example shows `{\"status\":\"ok\",\"version\":\"2.3.20\",\"auth\":\"not_authenticated\"}` but actual implementation (src/proxy/standalone-server.ts:902-911) returns additional `mcp` field: `{status, version, auth, mcp: {enabled, servers, tools}}`. Users may think something is wrong when they see additional fields in the actual response."
-      },
-      {
-        "file": "docs/OH-MY-PI.md",
-        "line": 87,
-        "severity": "blocking",
-        "description": "Same issue: health endpoint response example is incomplete, missing the `mcp` field that the actual implementation returns."
-      },
-      {
         "file": "docs/FACTORY-DROID.md",
-        "line": 117,
-        "severity": "blocking",
-        "description": "Same issue: health endpoint response example is incomplete, missing the `mcp` field."
-      },
-      {
-        "file": "docs/FACTORY-DROID.md",
-        "line": 248,
+        "line": 240,
         "severity": "non_blocking",
-        "description": "Environment variable table lists `TOOL_LOOP_MAX_REPEAT` with default 2, but this only applies to standalone-server mode. When running as OpenCode plugin, the env var is `CURSOR_ACP_TOOL_LOOP_MAX_REPEAT` (src/plugin.ts:301) with default 3 (src/plugin.ts:1795). Users running in plugin mode may be confused when this env var doesn't work."
+        "description": "Environment variable table documents `TOOL_LOOP_MAX_REPEAT` with default 2, but this only applies to standalone-server mode. When running as OpenCode plugin, the env var is `CURSOR_ACP_TOOL_LOOP_MAX_REPEAT` (src/plugin.ts:301) with default 3. Users running in plugin mode may be confused when this env var doesn't work as documented."
       }
     ]
   },
-  "sharedStateObservations": [],
+  "sharedStateObservations": [
+    {
+      "category": "library",
+      "description": "The distinction between standalone-server mode env vars and plugin mode env vars is not documented in any shared knowledge base. Worker documented TOOL_LOOP_MAX_REPEAT but not CURSOR_ACP_TOOL_LOOP_MAX_REPEAT. This could be added to .factory/library/environment.md or similar."
+    }
+  ],
   "addressesFailureFrom": null,
-  "summary": "Documentation exists for all three target clients with comprehensive setup instructions, config examples, and troubleshooting. However, the health endpoint response examples are inaccurate across all three docs - they don't show the `mcp` field that the actual implementation returns. This is a blocking issue that will cause confusion during user testing. The environment variable naming inconsistency between plugin mode and standalone mode should also be documented."
+  "summary": "Documentation passes review. All three client integration docs (OPENCODE.md, OH-MY-PI.md, FACTORY-DROID.md) exist with correct configurations and comprehensive content. The health endpoint examples now correctly include the `mcp` field (verified fixed by commit e3ad0bf from fix-docs-accuracy). The only remaining issue is a non-blocking documentation gap regarding plugin mode vs standalone mode environment variables in FACTORY-DROID.md."
 }

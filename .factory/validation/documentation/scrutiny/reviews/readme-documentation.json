@@ -1,57 +1,37 @@
 {
   "featureId": "readme-documentation",
-  "reviewedAt": "2026-03-19T22:45:00.000Z",
-  "commitId": "bf32af1",
-  "transcriptSkeletonReviewed": true,
-  "diffReviewed": true,
-  "status": "pass",
-  "codeReview": {
-    "summary": "README.md is well-structured and comprehensively covers the project. All required sections per the feature's expectedBehavior are present. Minor inaccuracies exist but are non-blocking.",
-    "issues": [
-      {
-        "file": "README.md",
-        "line": 63,
-        "severity": "non_blocking",
-        "description": "Git clone URL uses 'CliCursorProxyAPI' as repo name, but actual remote is 'opencode-cursor' (https://github.com/ThewindMom/opencode-cursor.git). Users who copy-paste the clone command will get a 404. The cd command on line 64 also uses CliCursorProxyAPI."
-      },
-      {
-        "file": "README.md",
-        "line": 380,
-        "severity": "non_blocking",
-        "description": "Project structure shows 'handler.ts' in src/proxy/ but doesn't list other proxy files present: prompt-builder.ts, tool-loop.ts, formatter.ts, types.ts. The listing is incomplete but not incorrect."
-      },
-      {
-        "file": "README.md",
-        "line": 382,
-        "severity": "non_blocking",
-        "description": "streaming/ section shows 4 files (parser.ts, line-buffer.ts, delta-tracker.ts) but misses ai-sdk-parts.ts which is also present in the directory."
-      },
-      {
-        "file": "README.md",
-        "line": 67,
-        "severity": "non_blocking",
-        "description": "Quickstart includes 'bun run build' step, but 'bun run proxy' works directly from source without a build step. Including build may confuse users into thinking it's required. The build step is only needed for installing the CLI globally."
-      },
-      {
-        "file": "README.md",
-        "line": 170,
-        "severity": "non_blocking",
-        "description": "The /v1/models response example shows only {id, name} per model, but the actual response includes additional fields: object, created, owned_by. This is a minor documentation inaccuracy but doesn't break client compatibility."
-      }
-    ]
-  },
-  "sharedStateObservations": [
+  "status": "fail",
+  "issues": [
     {
-      "area": "conventions",
-      "observation": "The README assumes a 'bun' runtime and doesn't mention npm/node as alternatives despite package.json supporting both. The AGENTS.md or services.yaml doesn't specify whether to document both runtimes or pick one convention.",
-      "evidence": "Quickstart section only uses 'bun' commands. package.json scripts use 'bun' as primary."
+      "severity": "blocking",
+      "description": "Git clone URL in Quickstart section (line ~63) uses 'CliCursorProxyAPI' as repo name, but the actual repository is 'opencode-cursor' (https://github.com/ThewindMom/opencode-cursor.git). Users who copy-paste the clone command will get a 404 error. The cd command on line 64 also uses 'CliCursorProxyAPI'."
     },
     {
-      "area": "knowledge",
-      "observation": "The README assumes users know what 'cursor-agent' is and how to install it, but there's no link to installation instructions. The Prerequisites section says 'Install via curl' but doesn't provide the actual command.",
-      "evidence": "Prerequisites says: 'cursor-agent: Install via curl https://cursor.com/install -fsS | bash' but this is a description, not a copy-pasteable command. No link to cursor-agent documentation."
+      "severity": "blocking",
+      "description": "License badge shows 'BSD-3-Clause' but package.json license field is 'ISC'. This is a factual inconsistency about the project's license."
+    },
+    {
+      "severity": "non-blocking",
+      "description": "Project structure section (line ~380) is incomplete. The proxy/ directory listing only shows handler.ts, server.ts, standalone-server.ts but is missing: formatter.ts, prompt-builder.ts, tool-loop.ts, types.ts. The streaming/ directory listing shows only parser.ts, line-buffer.ts, delta-tracker.ts but is missing: ai-sdk-parts.ts, openai-sse.ts, types.ts."
+    },
+    {
+      "severity": "non-blocking",
+      "description": "Quickstart includes 'bun run build' step after 'bun install', but 'bun run proxy' works directly from source without building. The build step is only needed if installing the CLI globally, not for running the proxy."
+    },
+    {
+      "severity": "non-blocking",
+      "description": "Prerequisites section mentions cursor-agent install via 'curl https://cursor.com/install -fsS | bash' as a description rather than a formatted code block, making it less clear for copy-paste usage."
     }
   ],
-  "addressesFailureFrom": null,
-  "summary": "The README is comprehensive and well-organized with all required sections present. The architecture diagram, quickstart, API docs, troubleshooting, and client integration guides are all present and largely accurate. There are no blocking issues — only minor non-blocking inaccuracies: (1) the git clone URL uses a non-existent repo name 'CliCursorProxyAPI' instead of actual 'opencode-cursor', (2) project structure is incomplete but not incorrect, and (3) the build step may be unnecessary for basic proxy usage. The documentation matches the actual implementation for all major functional claims (endpoints, env vars, error codes)."
+  "sharedStateObservations": [
+    {
+      "category": "library",
+      "description": "The project has no entry in .factory/library/ documenting the project naming discrepancy (CliCursorProxyAPI vs opencode-cursor). This caused the README to reference incorrect clone URL. A library entry clarifying the project history/naming would prevent future documentation errors."
+    },
+    {
+      "category": "services.yaml",
+      "description": "The README correctly documents the cursor-proxy service from .factory/services.yaml in the Factory Droid integration section. This is accurate."
+    }
+  ],
+  "summary": "The README has significant blocking issues: (1) The git clone URL uses a non-existent repository name 'CliCursorProxyAPI' instead of the actual 'opencode-cursor', which will cause users to get 404 errors, (2) The license badge claims BSD-3-Clause but the actual license is ISC. Non-blocking issues include incomplete project structure listing and minor quickstart inaccuracies. All required sections exist (quickstart, architecture overview, client integration guides, troubleshooting), but accuracy problems need fixing."
 }
