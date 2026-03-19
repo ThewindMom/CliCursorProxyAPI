@@ -1,32 +1,25 @@
 {
   "milestone": "validation",
-  "round": 1,
+  "round": 2,
   "status": "fail",
   "assertionsSummary": {
     "total": 2,
     "passed": 0,
-    "failed": 2,
+    "failed": 0,
     "blocked": 2
   },
   "passedAssertions": [],
-  "failedAssertions": [
-    {
-      "id": "VAL-CROSS-001",
-      "reason": "Blocked: requires authenticated cursor-agent for end-to-end chat flow testing. cursor-agent status shows 'Not logged in'. Code implementation verified via 490 unit tests."
-    },
-    {
-      "id": "VAL-CROSS-002",
-      "reason": "Blocked: requires authenticated cursor-agent for auth flow with model selection. Same auth blocker as VAL-CROSS-001."
-    }
-  ],
+  "failedAssertions": [],
   "blockedAssertions": [
     {
       "id": "VAL-CROSS-001",
-      "blockedBy": "cursor-agent not authenticated (Not logged in)"
+      "blockedBy": "cursor-agent not authenticated (Not logged in)",
+      "round2Note": "Re-confirmed blocked: /v1/models returns empty list without auth, cannot test full chat flow"
     },
     {
       "id": "VAL-CROSS-002",
-      "blockedBy": "cursor-agent not authenticated (Not logged in)"
+      "blockedBy": "cursor-agent not authenticated (Not logged in)",
+      "round2Note": "Re-confirmed blocked: same auth issue as VAL-CROSS-001"
     }
   ],
   "appliedUpdates": [],
@@ -35,6 +28,6 @@
     "proxyVersion": "2.3.20",
     "cursorAgentAuth": "not_authenticated"
   },
-  "notes": "Both assertions (VAL-CROSS-001, VAL-CROSS-002) require authenticated cursor-agent for end-to-end testing. The code implementation has been verified via 490 unit tests as documented in the end-to-end-test feature. User must run `cursor-agent login` to enable full E2E testing.",
-  "previousRound": null
+  "notes": "Round 2 re-test confirms same blockers. VAL-CROSS-001 and VAL-CROSS-002 require authenticated cursor-agent for E2E testing. /v1/models returns empty list without auth, preventing any chat completions testing. User must run `cursor-agent login` to enable full E2E testing.",
+  "previousRound": ".factory/validation/validation/user-testing/synthesis.json"
 }
