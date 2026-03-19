@@ -234,7 +234,11 @@ function checkCursorAgentStatus(): boolean {
       outputPreview: cleanOutput.substring(0, 100) 
     });
 
-    return isLoggedIn && exitCode === 0;
+    // Note: exitCode check is relaxed because bun's spawnSync with timeout option
+    // has a known bug where it sometimes returns -1 even when the process exited with 0.
+    // The isLoggedIn check is based on stdout content which is reliable.
+    // When cursor-agent is not logged in, it exits with non-zero OR stdout doesn't contain "Logged in".
+    return isLoggedIn;
   } catch (error) {
     log.debug("cursor-agent status check failed", { error: String(error) });
     return false;
