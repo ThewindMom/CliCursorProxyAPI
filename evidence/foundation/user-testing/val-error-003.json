@@ -1,0 +1,2 @@
+{"error":{"message":"Error: Authentication required. Please run 'agent login' first, or set CURSOR_API_KEY environment variable.","type":"internal_error","code":"server_error","status":500}}
+HTTP_CODE:500

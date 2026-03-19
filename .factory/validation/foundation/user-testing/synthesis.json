@@ -1,6 +1,6 @@
 {
   "milestone": "foundation",
-  "round": 1,
+  "round": 2,
   "status": "fail",
   "assertionsSummary": {
     "total": 16,
@@ -24,15 +24,15 @@
   "failedAssertions": [
     {
       "id": "VAL-ERROR-003",
-      "reason": "Returns HTTP 500 instead of HTTP 400 for unknown model. Error message is correct and lists available models, but status code violates OpenAI API spec."
+      "reason": "Request with unknown model 'nonexistent-model-xyz' returns HTTP 500 with 'Authentication required' error, not HTTP 400 with model not found error. The auth failure is occurring before model validation."
     },
     {
       "id": "VAL-AUTH-002",
-      "reason": "Proxy /health endpoint shows 'unauthenticated' despite cursor-agent being authenticated. Auth file exists in ~/.cursor/cli-config.json but contains only user info, no access token."
+      "reason": "Proxy shows 'authenticated' in /health even when cursor-agent status shows 'Not logged in'. The auth detection fallback incorrectly returns true when cli-config.json exists, even though it contains no access token - only user settings."
     },
     {
       "id": "VAL-AUTH-003",
-      "reason": "cli-config.json does not contain an access token. Token appears to be stored in cursor-agent's own location, not in ~/.cursor/"
+      "reason": "cli-config.json does not contain an access token field - only user settings (permissions, editor, model, etc.). Token is stored internally by cursor-agent and not accessible to the proxy."
     }
   ],
   "blockedAssertions": [
@@ -45,17 +45,6 @@
       "blockedBy": "Cannot make cursor-agent unauthenticated without breaking test environment"
     }
   ],
-  "appliedUpdates": [
-    {
-      "target": "user-testing.md",
-      "description": "Created user testing guide with curl commands for HTTP API testing",
-      "source": "setup"
-    },
-    {
-      "target": "services.yaml",
-      "description": "Created services.yaml with cursor-proxy service definition",
-      "source": "setup"
-    }
-  ],
-  "previousRound": null
+  "appliedUpdates": [],
+  "previousRound": ".factory/validation/foundation/user-testing/synthesis.json"
 }
