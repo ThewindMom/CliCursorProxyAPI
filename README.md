@@ -60,7 +60,7 @@ CliCursorProxyAPI is a standalone proxy server that provides OpenAI-compatible R
 ### 1. Install & Build
 
 ```bash
-git clone https://github.com/ThewindMom/opencode-cursor.git
+git clone https://github.com/ThewindMom/CliCursorProxyAPI.git
 cd CliCursorProxyAPI
 bun install
 bun run build
