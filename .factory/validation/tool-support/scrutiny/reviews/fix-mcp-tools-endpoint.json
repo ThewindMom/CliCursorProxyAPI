@@ -1,0 +1,15 @@
+{
+  "featureId": "fix-mcp-tools-endpoint",
+  "reviewedAt": "2026-03-19T21:59:00.000Z",
+  "commitId": "31f35700b18dd8ac18d4cafa1c2ad72d31953a3b",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The fix properly addresses both blocking issues from the mcp-bridge review. (1) The /v1/tools endpoint now returns complete tool objects with description and inputSchema fields. (2) The MCP tool name format (mcp__serverName__toolName) parsing via parseMcpToolName() is verified to be correct. The implementation extends the mcpTools Map type to store full tool metadata and updates the endpoint to return these fields.",
+    "issues": []
+  },
+  "sharedStateObservations": [],
+  "addressesFailureFrom": null,
+  "summary": "Fix passes review. The /v1/tools endpoint now includes description and inputSchema fields in tool objects, and the MCP tool name format parsing was verified correct. No new issues introduced. Build, TypeScript, and all 493 tests pass."
+}
