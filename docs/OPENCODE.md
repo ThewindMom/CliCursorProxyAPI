@@ -58,51 +58,12 @@ Add the following to your OpenCode config file (`~/.config/opencode/opencode.jso
         "baseURL": "http://127.0.0.1:32124/v1"
       },
       "models": {
-        "cursor-acp/auto": { "name": "Auto" },
+        "cursor-acp/composer-2": { "name": "Composer 2" },
+        "cursor-acp/composer-2-fast": { "name": "Composer 2 Fast" },
         "cursor-acp/composer-1.5": { "name": "Composer 1.5" },
-        "cursor-acp/composer-1": { "name": "Composer 1" },
-        "cursor-acp/opus-4.6-thinking": { "name": "Claude 4.6 Opus (Thinking)" },
-        "cursor-acp/opus-4.6": { "name": "Claude 4.6 Opus" },
-        "cursor-acp/sonnet-4.6": { "name": "Claude 4.6 Sonnet" },
-        "cursor-acp/sonnet-4.6-thinking": { "name": "Claude 4.6 Sonnet (Thinking)" },
-        "cursor-acp/opus-4.5": { "name": "Claude 4.5 Opus" },
-        "cursor-acp/opus-4.5-thinking": { "name": "Claude 4.5 Opus (Thinking)" },
-        "cursor-acp/sonnet-4.5": { "name": "Claude 4.5 Sonnet" },
-        "cursor-acp/sonnet-4.5-thinking": { "name": "Claude 4.5 Sonnet (Thinking)" },
-        "cursor-acp/gpt-5.4-high": { "name": "GPT-5.4 High" },
-        "cursor-acp/gpt-5.4-high-fast": { "name": "GPT-5.4 High Fast" },
-        "cursor-acp/gpt-5.4-xhigh": { "name": "GPT-5.4 Extra High" },
-        "cursor-acp/gpt-5.4-xhigh-fast": { "name": "GPT-5.4 Extra High Fast" },
-        "cursor-acp/gpt-5.4-medium": { "name": "GPT-5.4" },
-        "cursor-acp/gpt-5.4-medium-fast": { "name": "GPT-5.4 Fast" },
-        "cursor-acp/gpt-5.3-codex": { "name": "GPT-5.3 Codex" },
-        "cursor-acp/gpt-5.3-codex-fast": { "name": "GPT-5.3 Codex Fast" },
-        "cursor-acp/gpt-5.3-codex-low": { "name": "GPT-5.3 Codex Low" },
-        "cursor-acp/gpt-5.3-codex-low-fast": { "name": "GPT-5.3 Codex Low Fast" },
-        "cursor-acp/gpt-5.3-codex-high": { "name": "GPT-5.3 Codex High" },
-        "cursor-acp/gpt-5.3-codex-high-fast": { "name": "GPT-5.3 Codex High Fast" },
-        "cursor-acp/gpt-5.3-codex-xhigh": { "name": "GPT-5.3 Codex Extra High" },
-        "cursor-acp/gpt-5.3-codex-xhigh-fast": { "name": "GPT-5.3 Codex Extra High Fast" },
-        "cursor-acp/gpt-5.3-codex-spark-preview": { "name": "GPT-5.3 Codex Spark" },
-        "cursor-acp/gpt-5.2": { "name": "GPT-5.2" },
-        "cursor-acp/gpt-5.2-high": { "name": "GPT-5.2 High" },
-        "cursor-acp/gpt-5.2-codex": { "name": "GPT-5.2 Codex" },
-        "cursor-acp/gpt-5.2-codex-fast": { "name": "GPT-5.2 Codex Fast" },
-        "cursor-acp/gpt-5.2-codex-low": { "name": "GPT-5.2 Codex Low" },
-        "cursor-acp/gpt-5.2-codex-low-fast": { "name": "GPT-5.2 Codex Low Fast" },
-        "cursor-acp/gpt-5.2-codex-high": { "name": "GPT-5.2 Codex High" },
-        "cursor-acp/gpt-5.2-codex-high-fast": { "name": "GPT-5.2 Codex High Fast" },
-        "cursor-acp/gpt-5.2-codex-xhigh": { "name": "GPT-5.2 Codex Extra High" },
-        "cursor-acp/gpt-5.2-codex-xhigh-fast": { "name": "GPT-5.2 Codex Extra High Fast" },
-        "cursor-acp/gpt-5.1-codex-max": { "name": "GPT-5.1 Codex Max" },
-        "cursor-acp/gpt-5.1-codex-max-high": { "name": "GPT-5.1 Codex Max High" },
-        "cursor-acp/gpt-5.1-codex-mini": { "name": "GPT-5.1 Codex Mini" },
-        "cursor-acp/gpt-5.1-high": { "name": "GPT-5.1 High" },
-        "cursor-acp/gemini-3.1-pro": { "name": "Gemini 3.1 Pro" },
-        "cursor-acp/gemini-3-pro": { "name": "Gemini 3 Pro" },
-        "cursor-acp/gemini-3-flash": { "name": "Gemini 3 Flash" },
-        "cursor-acp/grok": { "name": "Grok" },
-        "cursor-acp/kimi-k2.5": { "name": "Kimi K2.5" }
+        "cursor-acp/auto": { "name": "Auto" },
+        "cursor-acp/sonnet-4.6": { "name": "Sonnet 4.6" },
+        "cursor-acp/opus-4.6": { "name": "Opus 4.6" }
       }
     }
   }
@@ -111,13 +72,21 @@ Add the following to your OpenCode config file (`~/.config/opencode/opencode.jso
 
 ### Step 4: Verify Model List
 
-Refresh the model list in OpenCode:
-
 ```bash
-/models
+opencode models cursor-acp
 ```
 
-You should see the Cursor ACP models listed under the provider.
+You should see models listed with the double prefix:
+```
+cursor-acp/cursor-acp/auto
+cursor-acp/cursor-acp/composer-1.5
+cursor-acp/cursor-acp/composer-2
+cursor-acp/cursor-acp/composer-2-fast
+cursor-acp/cursor-acp/opus-4.6
+cursor-acp/cursor-acp/sonnet-4.6
+```
+
+**Note:** The double `cursor-acp/cursor-acp/` prefix is cosmetic. When OpenCode makes API requests, it strips the provider prefix and sends just `auto`, `sonnet-4.6`, etc. to the proxy.
 
 ## Testing the Integration
 
@@ -137,25 +106,48 @@ After authentication, this should return a list of available Cursor Pro models.
 
 ### Test Chat Completions
 
+**Via curl (proxy directly):**
 ```bash
 curl -X POST http://localhost:32124/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "cursor-acp/auto",
+    "model": "auto",
     "messages": [{"role": "user", "content": "Hello"}],
     "stream": true
   }'
+```
+
+**Via OpenCode CLI:**
+```bash
+opencode run --model "cursor-acp/cursor-acp/auto" "Say hello in 3 words"
 ```
 
 This should return a streaming SSE response.
 
 ## Troubleshooting
 
+### "Unknown model" Error in OpenCode
+
+If you see `Error: Unknown model: cursor-acp/auto`:
+
+1. **Use the full model name with double prefix:**
+   ```bash
+   opencode run --model "cursor-acp/cursor-acp/auto" "Your prompt"
+   ```
+
+2. **Verify proxy is running:**
+   ```bash
+   curl http://localhost:32124/health
+   ```
+
+3. **Restart OpenCode** after config changes
+
 ### Proxy Not Running
 
 If the proxy is not running, start it:
 
 ```bash
+cd /path/to/CliCursorProxyAPI
 bun run proxy
 ```
 
@@ -167,25 +159,52 @@ If you see auth errors:
 2. Login: `cursor-agent login`
 3. Check health: `curl http://localhost:32124/health` - should show `auth: "authenticated"`
 
-### Model Not Found
+### Model Not Found (curl)
 
-If you get model not found errors:
+If you get model not found errors via curl:
 
-1. Verify the model name matches exactly (e.g., `cursor-acp/auto`)
+1. Use the bare model name (no `cursor-acp/` prefix):
+   ```bash
+   curl -X POST http://localhost:32124/v1/chat/completions \
+     -d '{"model": "auto", ...}'  # NOT "cursor-acp/auto"
+   ```
 2. Check the model is available: `curl http://localhost:32124/v1/models`
 
 ### Connection Refused
 
 If you get connection refused:
 
-1. Verify proxy is running on port 32124
-2. Check no other process is using the port: `lsof -i :32124`
+1. Verify proxy is running on port 32124: `lsof -i :32124`
+2. Start the proxy: `bun run proxy`
 
-## Model Selection in OpenCode
+### Config File JSON Syntax Error
 
-After configuration, you can select models in OpenCode:
+If OpenCode fails to load the config:
 
-1. Run `/models` command
+1. Validate JSON:
+   ```bash
+   python3 -m json.tool ~/.config/opencode/opencode.json > /dev/null
+   ```
+2. Fix any trailing commas (JSON doesn't allow them)
+
+## Using CliCursorProxyAPI Models in OpenCode
+
+### OpenCode CLI
+
+Run a single prompt with a specific model:
+```bash
+opencode run --model "cursor-acp/cursor-acp/composer-2-fast" "Your prompt here"
+```
+
+### OpenCode TUI
+
+Start the TUI with a specific model:
+```bash
+opencode -m cursor-acp/cursor-acp/sonnet-4.6
+```
+
+Or within the TUI:
+1. Press `m` to open model selector
 2. Select "Cursor ACP" provider
 3. Choose your desired model
 

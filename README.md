@@ -85,17 +85,29 @@ This opens a browser for OAuth authentication with Cursor.
 ### 4. Verify Setup
 
 ```bash
-# Check health
+# Check health (ensure auth shows "authenticated")
 curl http://localhost:32124/health
 # {"status":"ok","version":"2.3.20","auth":"authenticated"}
 
 # List models
 curl http://localhost:32124/v1/models
 
-# Test chat
+# Test chat (streaming SSE)
 curl -X POST http://localhost:32124/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{"model":"auto","messages":[{"role":"user","content":"Hello"}],"stream":true}'
+```
+
+### 5. Use with OpenCode
+
+```bash
+# Add to ~/.config/opencode/opencode.json (see OpenCode section below)
+
+# List available models
+opencode models cursor-acp
+
+# Run with specific model
+opencode run --model "cursor-acp/cursor-acp/auto" "Hello"
 ```
 
 ## Using Composer 2
@@ -187,10 +199,34 @@ Choose your client below for detailed configuration:
 
 ### [OpenCode](docs/OPENCODE.md)
 
-Configure OpenCode to use CliCursorProxyAPI via `@ai-sdk/openai-compatible`:
+The most common use case for CliCursorProxyAPI is enabling Cursor Pro subscription models in OpenCode. Here's the complete setup:
+
+#### Step 1: Ensure Proxy is Running
+
+```bash
+cd /path/to/CliCursorProxyAPI
+bun run proxy
+```
+
+Verify it's working:
+```bash
+curl http://localhost:32124/health
+# {"status":"ok","version":"2.3.20","auth":"authenticated","mcp":{...}}
+```
+
+#### Step 2: Authenticate with Cursor
+
+```bash
+cursor-agent login
+```
+
+#### Step 3: Configure OpenCode
+
+Edit `~/.config/opencode/opencode.json`:
 
 ```json
 {
+  "$schema": "https://opencode.ai/config.json",
   "provider": {
     "cursor-acp": {
       "npm": "@ai-sdk/openai-compatible",
@@ -199,14 +235,83 @@ Configure OpenCode to use CliCursorProxyAPI via `@ai-sdk/openai-compatible`:
         "baseURL": "http://127.0.0.1:32124/v1"
       },
       "models": {
+        "cursor-acp/composer-2": { "name": "Composer 2" },
+        "cursor-acp/composer-2-fast": { "name": "Composer 2 Fast" },
+        "cursor-acp/composer-1.5": { "name": "Composer 1.5" },
         "cursor-acp/auto": { "name": "Auto" },
-        "cursor-acp/sonnet-4.6": { "name": "Claude 4.6 Sonnet" },
-        "cursor-acp/opus-4.6": { "name": "Claude 4.6 Opus" }
+        "cursor-acp/sonnet-4.6": { "name": "Sonnet 4.6" },
+        "cursor-acp/opus-4.6": { "name": "Opus 4.6" }
       }
     }
   }
 }
 ```
+
+**Important:** The `baseURL` must end with `/v1` and point to your running proxy.
+
+#### Step 4: Verify Models are Visible
+
+```bash
+opencode models cursor-acp
+```
+
+You should see:
+```
+cursor-acp/cursor-acp/auto
+cursor-acp/cursor-acp/composer-1.5
+cursor-acp/cursor-acp/composer-2
+cursor-acp/cursor-acp/composer-2-fast
+cursor-acp/cursor-acp/opus-4.6
+cursor-acp/cursor-acp/sonnet-4.6
+```
+
+**Note:** The double prefix (`cursor-acp/cursor-acp/`) is cosmetic — the proxy correctly handles the model name stripping.
+
+#### Step 5: Use in OpenCode
+
+**Using the CLI:**
+```bash
+opencode run --model "cursor-acp/cursor-acp/composer-2-fast" "Hello, write a hello world in Python"
+```
+
+**Using the TUI:**
+```bash
+# Set default model in config
+opencode -m cursor-acp/cursor-acp/composer-2-fast
+```
+
+Or within the TUI, use the model selector.
+
+#### Common OpenCode Commands
+
+```bash
+# List all models
+opencode models
+
+# List cursor-acp models specifically
+opencode models cursor-acp
+
+# Run with specific model
+opencode run --model "cursor-acp/cursor-acp/auto" "Your prompt here"
+
+# Start TUI with specific model
+opencode -m cursor-acp/cursor-acp/sonnet-4.6
+```
+
+#### Troubleshooting OpenCode Integration
+
+**"Unknown model" error:**
+- Ensure the proxy is running: `curl http://localhost:32124/health`
+- Use the full model name: `cursor-acp/cursor-acp/auto` (not just `auto`)
+- Restart OpenCode after config changes
+
+**Config file syntax error:**
+- JSON must be valid — trailing commas will cause errors
+- Use `python3 -m json.tool ~/.config/opencode/opencode.json` to validate
+
+**Model not appearing in list:**
+- Check the proxy is returning models: `curl http://localhost:32124/v1/models`
+- Ensure auth is working: `curl http://localhost:32124/health` should show `auth: "authenticated"`
 
 **See:** [docs/OPENCODE.md](docs/OPENCODE.md) for full guide
 
