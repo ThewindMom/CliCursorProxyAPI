@@ -81,7 +81,12 @@ Response:
 {
   "status": "ok",
   "version": "2.3.20",
-  "auth": "not_authenticated"
+  "auth": "not_authenticated",
+  "mcp": {
+    "enabled": false,
+    "servers": 0,
+    "tools": 0
+  }
 }
 ```
 

@@ -34,7 +34,7 @@ curl http://localhost:32124/health
 
 Expected response:
 ```json
-{"status":"ok","version":"2.3.20","auth":"not_authenticated"}
+{"status":"ok","version":"2.3.20","auth":"not_authenticated","mcp":{"enabled":false,"servers":0,"tools":0}}
 ```
 
 ### Step 2: Authenticate with cursor-agent
