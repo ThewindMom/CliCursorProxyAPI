@@ -98,6 +98,61 @@ curl -X POST http://localhost:32124/v1/chat/completions \
   -d '{"model":"auto","messages":[{"role":"user","content":"Hello"}],"stream":true}'
 ```
 
+## Using Composer 2
+
+Composer 2 is Cursor's latest flagship model with enhanced coding capabilities.
+
+### Available Composer Models
+
+```bash
+curl http://localhost:32124/v1/models | grep composer
+```
+
+**Models:**
+- `composer-2` — Composer 2 (full power)
+- `composer-2-fast` — Composer 2 Fast mode
+- `composer-1.5` — Composer 1.5
+
+### Test Composer 2
+
+```bash
+curl -X POST http://localhost:32124/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "composer-2",
+    "messages": [{"role": "user", "content": "Hello, what model are you?"}],
+    "stream": true
+  }'
+```
+
+### All Available Models
+
+| Model ID | Description |
+|----------|-------------|
+| `auto` | Auto-select best model |
+| `composer-2` | Composer 2 (latest) |
+| `composer-2-fast` | Composer 2 Fast |
+| `composer-1.5` | Composer 1.5 |
+| `sonnet-4.6` | Claude Sonnet 4.6 |
+| `opus-4.6` | Claude Opus 4.6 |
+| `gpt-5.2` | GPT-5.2 |
+| `gpt-5.3-codex` | GPT-5.3 Codex |
+
+### Example: Code Review with Composer 2
+
+```bash
+curl -X POST http://localhost:32124/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "composer-2",
+    "messages": [
+      {"role": "system", "content": "You are a code reviewer."},
+      {"role": "user", "content": "Review this function and suggest improvements:\n\nfunction add(a, b) { return a + b }"}
+    ],
+    "stream": false
+  }'
+```
+
 ## Client Integration Guides
 
 Choose your client below for detailed configuration:
