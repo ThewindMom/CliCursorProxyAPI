@@ -1,0 +1,27 @@
+{
+  "milestone": "tool-support",
+  "round": 1,
+  "status": "fail",
+  "assertionsSummary": {
+    "total": 4,
+    "passed": 0,
+    "failed": 4,
+    "blocked": 4
+  },
+  "passedAssertions": [],
+  "failedAssertions": [
+    { "id": "VAL-TOOL-001", "reason": "Blocked: requires authenticated cursor-agent for end-to-end tool call testing. Code implementation verified via inspection." },
+    { "id": "VAL-TOOL-002", "reason": "Blocked: requires authenticated cursor-agent to trigger tool calls and test loop guard. Code implementation verified via inspection." },
+    { "id": "VAL-TOOL-003", "reason": "Blocked: requires MCP servers configured to test schema normalization. Code implementation verified via inspection." },
+    { "id": "VAL-CROSS-003", "reason": "Blocked: requires MCP servers configured and authenticated cursor-agent. MCP bridge code is implemented but has no servers to connect to." }
+  ],
+  "blockedAssertions": [
+    { "id": "VAL-TOOL-001", "blockedBy": "cursor-agent not authenticated" },
+    { "id": "VAL-TOOL-002", "blockedBy": "cursor-agent not authenticated" },
+    { "id": "VAL-TOOL-003", "blockedBy": "No MCP servers configured" },
+    { "id": "VAL-CROSS-003", "blockedBy": "cursor-agent not authenticated, No MCP servers configured" }
+  ],
+  "appliedUpdates": [],
+  "previousRound": null,
+  "notes": "All 4 tool-support assertions are blocked due to environment constraints. Code implementation was verified via inspection - all features are properly implemented. These assertions require either authenticated cursor-agent, MCP server configuration, or both to test end-to-end."
+}

@@ -1,0 +1,96 @@
+{
+  "groupId": "tool-assertions",
+  "testedAt": "2026-03-19T22:15:00.000Z",
+  "isolation": {
+    "proxyUrl": "http://localhost:32124",
+    "cursorAgentAuth": "Not logged in",
+    "mcpServersConfigured": 0,
+    "workingDirectory": "/Users/thewindmom/Developer/01_Random_Coding/opencode-cursor"
+  },
+  "toolsUsed": ["curl", "code-inspection"],
+  "assertions": [
+    {
+      "id": "VAL-TOOL-001",
+      "title": "Tool call results are sent back",
+      "status": "blocked",
+      "steps": [
+        { "action": "Verify /v1/chat/completions endpoint exists", "expected": "Endpoint accepts streaming requests", "observed": "Endpoint exists at standalone-server.ts:handleChatCompletions" },
+        { "action": "Examine buildPrompt() for tool result formatting", "expected": "Tool results formatted with tool_call_id", "observed": "Code shows <tool_result id=\"${msg.tool_call_id}\"> format - IMPLEMENTED" },
+        { "action": "Send streaming chat request with tool calls", "expected": "Tool results included in subsequent requests", "observed": "Cannot test - requires authenticated cursor-agent" }
+      ],
+      "evidence": {
+        "codeReference": "standalone-server.ts:buildPrompt() lines 850-875",
+        "implementation": "Tool results correctly formatted as <tool_result id=\"${msg.tool_call_id}\">${content}</tool_result>"
+      },
+      "issues": "Cannot perform end-to-end test without authenticated cursor-agent. Code implementation verified via inspection."
+    },
+    {
+      "id": "VAL-TOOL-002",
+      "title": "Loop guard prevents infinite loops",
+      "status": "blocked",
+      "steps": [
+        { "action": "Examine tool-loop-guard.ts implementation", "expected": "Loop guard with configurable threshold", "observed": "createToolLoopGuard() with maxRepeat default=2, exploration tools 5x multiplier - IMPLEMENTED" },
+        { "action": "Verify loop guard integration in standalone-server.ts", "expected": "Loop guard initialized in handleChatCompletions", "observed": "Lines 632-635 initialize toolLoopGuard with createToolLoopGuard(messages, maxRepeat)" },
+        { "action": "Send repeated tool calls to trigger threshold", "expected": "Error returned after threshold exceeded", "observed": "Cannot test - requires authenticated cursor-agent and full chat flow" }
+      ],
+      "evidence": {
+        "codeReference": "provider/tool-loop-guard.ts:parseToolLoopMaxRepeat(), standalone-server.ts:632-635",
+        "implementation": "Default maxRepeat=2, exploration tools get 10 repeats (5x multiplier). emit error and stop stream when triggered."
+      },
+      "issues": "Cannot test runtime behavior without authenticated cursor-agent. Code implementation verified via inspection."
+    },
+    {
+      "id": "VAL-TOOL-003",
+      "title": "Tool schema normalization works",
+      "status": "blocked",
+      "steps": [
+        { "action": "Examine tool-schema-compat.ts", "expected": "MCP schema normalization to OpenAI function format", "observed": "applyToolSchemaCompat() handles normalization - IMPLEMENTED" },
+        { "action": "Verify schema type handling", "expected": "Supports string, number, boolean, array, object types", "observed": "mcpSchemaToZod() in tool-bridge.ts handles all types - IMPLEMENTED" },
+        { "action": "Test actual MCP tool with various schema formats", "expected": "Tools work correctly", "observed": "Cannot test - no MCP servers configured" }
+      ],
+      "evidence": {
+        "codeReference": "provider/tool-schema-compat.ts:applyToolSchemaCompat(), mcp/tool-bridge.ts:mcpSchemaToZod()",
+        "implementation": "Comprehensive normalization: arg key aliases, tool-specific args (bash, rm, todowrite, write, edit), type coercion, schema validation"
+      },
+      "issues": "Cannot test runtime behavior without MCP servers configured. Code implementation verified via inspection."
+    },
+    {
+      "id": "VAL-CROSS-003",
+      "title": "MCP bridge integration",
+      "status": "blocked",
+      "steps": [
+        { "action": "Verify MCP bridge initialization code", "expected": "initMcpBridge() reads configs and connects", "observed": "initMcpBridge() in standalone-server.ts - IMPLEMENTED" },
+        { "action": "Check /v1/tools endpoint", "expected": "Returns list of MCP tools", "observed": "Endpoint exists and returns MCP tools info" },
+        { "action": "Call /v1/tools", "expected": "List of available MCP tools", "observed": "Returned: {\"servers\":0,\"tools\":0} - no MCP servers configured" },
+        { "action": "Configure MCP server and test full flow", "expected": "MCP tool calls route correctly", "observed": "Cannot test - no MCP servers configured" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "curlOutput": "GET /v1/tools returned {\"object\":\"list\",\"data\":[],\"mcp\":{\"servers\":0,\"tools\":0}}",
+        "codeReference": "standalone-server.ts:initMcpBridge(), executeMcpTool(), isMcpTool()"
+      },
+      "issues": "Cannot test without MCP servers configured in opencode.json. MCP bridge code is properly implemented with namespacing (mcp__serverName__toolName)."
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Proxy returns empty tools list when no MCP servers configured - this is expected behavior but prevents end-to-end testing",
+      "resolved": false,
+      "resolution": "Would need to configure a test MCP server to verify full flow",
+      "affectedAssertions": ["VAL-TOOL-003", "VAL-CROSS-003"]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "cursor-agent is not authenticated (shows 'Not logged in'). Cannot test authenticated flows like tool call result forwarding or loop guard triggering.",
+      "affectedAssertions": ["VAL-TOOL-001", "VAL-TOOL-002"],
+      "quickFixAttempted": "N/A - requires user to run cursor-agent login"
+    },
+    {
+      "description": "No MCP servers configured in opencode.json. MCP bridge code exists but has no servers to connect to.",
+      "affectedAssertions": ["VAL-TOOL-003", "VAL-CROSS-003"],
+      "quickFixAttempted": "N/A - requires MCP server configuration"
+    }
+  ],
+  "summary": "Tested 4 assertions (VAL-TOOL-001, VAL-TOOL-002, VAL-TOOL-003, VAL-CROSS-003). All assertions are BLOCKED due to missing cursor-agent authentication and no MCP servers configured. Code implementation was verified via inspection - all features are properly implemented in source code but cannot be tested end-to-end without authenticated cursor-agent and/or MCP server configuration."
+}
