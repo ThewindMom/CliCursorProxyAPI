@@ -13,6 +13,7 @@ import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { verifyCursorAuth } from "../auth.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -503,8 +504,13 @@ async function handleRequest(
 
   // Health check endpoint
   if (path === "/health" && req.method === "GET") {
+    const isAuthenticated = verifyCursorAuth();
     res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ status: "ok", version: "1.0.0" }));
+    res.end(JSON.stringify({
+      status: "ok",
+      version: "2.3.20",
+      auth: isAuthenticated ? "authenticated" : "not_authenticated"
+    }));
     return;
   }
 
