@@ -119,7 +119,8 @@ async function fetchModels(): Promise<Array<{ id: string; object: string; create
 
     child.on("close", (code) => {
       if (code !== 0 && !stdout) {
-        reject(new Error(stderr || `cursor-agent exited with code ${code}`));
+        const parsed = parseAgentError(stderr);
+        reject(new Error(parsed.userMessage));
         return;
       }
 
@@ -252,11 +253,59 @@ function processStreamLine(state: StreamState, line: string, controller: any, en
   return false;
 }
 
+/**
+ * Authentication error with helpful message
+ */
+class AuthenticationError extends Error {
+  constructor(message: string, public readonly userMessage: string) {
+    super(message);
+    this.name = "AuthenticationError";
+  }
+}
+
+/**
+ * Check if the user is authenticated with cursor-agent
+ * Throws AuthenticationError if not authenticated
+ */
+function requireCursorAuth(): void {
+  if (!verifyCursorAuth()) {
+    throw new AuthenticationError(
+      "Not authenticated with Cursor",
+      "Please run 'cursor-agent login' to authenticate with your Cursor account. " +
+      "This proxy requires an active Cursor Pro subscription to handle requests."
+    );
+  }
+}
+
 async function handleChatCompletions(
   req: IncomingMessage,
   res: ServerResponse,
   workspaceDir: string,
 ): Promise<void> {
+  // Check authentication before processing
+  let authError: AuthenticationError | null = null;
+  try {
+    requireCursorAuth();
+  } catch (err) {
+    if (err instanceof AuthenticationError) {
+      authError = err;
+    } else {
+      throw err;
+    }
+  }
+
+  if (authError) {
+    res.writeHead(401, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({
+      error: {
+        message: authError.userMessage,
+        type: "authentication_error",
+        code: 401,
+      }
+    }));
+    return;
+  }
+
   const chunks: Buffer[] = [];
 
   for await (const chunk of req) {
@@ -402,6 +451,11 @@ async function handleChatCompletions(
 
   const lineBuffer: string[] = [];
   let buffer = "";
+  let stderrBuffer = "";
+
+  child.stderr.on("data", (chunk) => {
+    stderrBuffer += chunk.toString();
+  });
 
   child.stdout.on("data", (chunk) => {
     buffer += chunk.toString();
@@ -454,7 +508,17 @@ async function handleChatCompletions(
     }
   };
 
-  child.on("close", () => {
+  child.on("close", (code) => {
+    // Check for errors (non-zero exit code with no output)
+    if (code !== 0 && !state.sawAssistantPartials && !state.assistantBuffer) {
+      const parsed = parseAgentError(stderrBuffer);
+      const errorChunk = createChunk(id, created, model, { content: `cursor-proxy error: ${parsed.userMessage}` }, true);
+      res.write(formatSseChunk(errorChunk));
+      res.write(formatSseDone());
+      res.end();
+      return;
+    }
+
     // Process remaining buffer
     if (buffer.trim()) {
       lineBuffer.push(buffer);
